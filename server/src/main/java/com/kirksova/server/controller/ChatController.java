@@ -43,11 +43,9 @@ public class ChatController {
         user.setMessageRegistration(registerMessage);
         user.setHeaderAccessor(headerAccessor);
         if (user.register()) {
-            //messagingTemplate.convertAndSend("/topic/0",
             return new Message(user.getUser().getId(), "Вы зарегистрированы", TypeOfMessage.CorrectRegistration, null, null);
         } else
             log.info("Not valid registration data");
-        //messagingTemplate.convertAndSend("/topic/0",
          return new Message(null, "Неправильные данные, для регистрации введите /register agentВашеИмя " +
                 "если вы агент или /register client ВашеИмя если вы клиент", TypeOfMessage.NotValidRegistrationData, null, null);
     }
