@@ -1,21 +1,16 @@
 package com.kirksova.server.model;
 
+import com.kirksova.server.model.enumType.TypeOfMessage;
+
 public class Message {
 
-    private MessageType typeOfMessage;
+    private TypeOfMessage typeOfMessage;
     private Long senderId;
     private Long to;
     private String nameTo;
     private String text;
 
-    public Message() {
-    }
-
-    public Message(Long senderId, String text, MessageType typeOfMessage) {
-         this(senderId, text, typeOfMessage, null, null);
-    }
-
-    public Message(Long senderId, String text, MessageType typeOfMessage, Long to, String nameTo) {
+    public Message(Long senderId, String text, TypeOfMessage typeOfMessage, Long to, String nameTo) {
         this.senderId = senderId;
         this.text = text;
         this.typeOfMessage = typeOfMessage;
@@ -31,7 +26,7 @@ public class Message {
         return text;
     }
 
-    public MessageType getTypeOfMessage() {
+    public TypeOfMessage getTypeOfMessage() {
         return typeOfMessage;
     }
 
@@ -41,32 +36,5 @@ public class Message {
 
     public String getNameTo() {
         return nameTo;
-    }
-
-    public enum MessageType {
-        LEAVE_CLIENT, AGENT_CANT_LEAVE, NOT_VALID_REGISTRATION_DATA, CORRECT_REGISTRATION,
-        CONNECTED_CLIENT, CONNECTED_AGENT, NO_FREE_AGENT, FIRST_MESSAGE_AGENT, END_DIALOGUE,
-        DISCONNECTION_OF_THE_CLIENT, DISCONNECTION_OF_THE_AGENT, YOUR_MESSAGES, CALL_SEARCH_FREE_AGENT,
-        REGISTER, MESSAGE_CHAT,
-    }
-
-    public void setTypeOfMessage(MessageType typeOfMessage) {
-        this.typeOfMessage = typeOfMessage;
-    }
-
-    public void setSenderId(Long senderId) {
-        this.senderId = senderId;
-    }
-
-    public void setTo(Long to) {
-        this.to = to;
-    }
-
-    public void setNameTo(String nameTo) {
-        this.nameTo = nameTo;
-    }
-
-    public void setText(String text) {
-        this.text = text;
     }
 }

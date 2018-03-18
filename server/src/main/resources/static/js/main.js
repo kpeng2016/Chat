@@ -43,7 +43,7 @@ function onConnected() {
     stompClient.send("/app/chat.addUser",
         {},
         JSON.stringify({
-            senderId: null, text: '/register ' + userRole.toLowerCase() + ' ' + userName, typeOfMessage: 'REGISTER', to: null
+            senderId: null, text: '/register ' + userRole + ' ' + userName, typeOfMessage: 'Register', to: null
         })
     );
 }
@@ -57,9 +57,8 @@ function leave(event) {
     userMessage = {
         senderId: userId,
         text: 'leave',
-        typeOfMessage: 'MESSAGE_CHAT',
-        to: to,
-        nameTo: nameInterlocutor
+        typeOfMessage: 'MessageChat',
+        to: to
     };
     stompClient.send("/app/chat.leave", {}, JSON.stringify(userMessage));
     event.preventDefault();
@@ -71,7 +70,7 @@ function sendMessage(event) {
         userMessage = {
             senderId: userId,
             text: messageInput.value,
-            typeOfMessage: 'MESSAGE_CHAT',
+            typeOfMessage: 'MessageChat',
             to: to,
             nameTo: nameInterlocutor
         };
@@ -95,7 +94,7 @@ function CallSearchFreeAgent() {
     var messageForServer = {
         senderId: userId,
         text: 'CallSearchFreeAgent',
-        typeOfMessage: 'CALL_SEARCH_FREE_AGENT',
+        typeOfMessage: 'CallSearchFreeAgent',
         to: null,
         nameTo: null
     };
@@ -109,7 +108,7 @@ function printMessageClientBeforeStartedDialogue() {
         userMessage = {
             senderId: userId,
             text: messageList[i],
-            typeOfMessage: 'MESSAGE_CHAT',
+            typeOfMessage: 'MessageChat',
             to: to,
             nameTo: nameInterlocutor
         };
@@ -121,12 +120,12 @@ function onMessageReceived(payload) {
     var serverMessage = JSON.parse(payload.body);
     var messageElement = document.createElement('li');
     switch (serverMessage.typeOfMessage) {
-        case 'NOT_VALID_REGISTRATION_DATA':
+        case 'NotValidRegistrationData':
             subscription.unsubscribe('/topic/0', onMessageReceived);
             checkRegister.textContent = 'Not valid registration data, please refresh this page to try again!';
             checkRegister.style.color = 'red';
             break;
-        case 'CORRECT_REGISTRATION':
+        case 'CorrectRegistration':
             registerPage.classList.add('hidden');
             chatPage.classList.remove('hidden');
             connectingElement.classList.add('hidden');
@@ -136,23 +135,22 @@ function onMessageReceived(payload) {
             messageElement.classList.add('event-message');
             printMessage(messageElement, serverMessage);
             break;
-        case 'CONNECTED_AGENT':
+        case 'ConnectedAgent':
             clearInterval(intervalID);
             messageElement.classList.add('event-message');
             printMessage(messageElement, serverMessage);
             to = serverMessage.to;
             nameInterlocutor = serverMessage.nameTo;
             printMessageClientBeforeStartedDialogue();
-            messageList = [];
             break;
-        case 'CONNECTED_CLIENT':
-        case 'END_DIALOGUE':
+        case 'ConnectedClient':
+        case 'EndDialogue':
             messageElement.classList.add('event-message');
             printMessage(messageElement, serverMessage);
             to = serverMessage.to;
             nameInterlocutor = serverMessage.nameTo;
             break;
-        case 'MESSAGE_CHAT':
+        case 'MessageChat':
             messageElement.classList.add('chat-message');
             var avatarElement = document.createElement('i');
             var avatarText = document.createTextNode(nameInterlocutor[0]);
@@ -165,19 +163,19 @@ function onMessageReceived(payload) {
             messageElement.appendChild(usernameElement);
             printMessage(messageElement, serverMessage);
             break;
-        case 'YOUR_MESSAGES':
+        case 'YourMessages':
             messageElement.classList.add('chat-message');
             settingMessageUser(messageElement);
             printMessage(messageElement, serverMessage);
             break;
-        case 'NO_FREE_AGENT':
-        case 'FIRST_MESSAGE_AGENT':
-        case 'AGENT_CANT_LEAVE':
+        case 'NoFreeAgent':
+        case 'FirstMessageAgent':
+        case 'AgentCantLeave':
             messageElement.classList.add('event-message');
             printMessage(messageElement, serverMessage);
             break;
-        case 'LEAVE_CLIENT':
-        case 'DISCONNECTION_OF_THE_CLIENT':
+        case 'LeaveClient':
+        case 'DisconnectionOfTheClient':
             message = {
                 senderId: serverMessage.userId,
                 text: 'The client left the chat, wait until the new client connects or closes the page to exit the network',
@@ -188,7 +186,7 @@ function onMessageReceived(payload) {
             messageElement.classList.add('event-message');
             printMessage(messageElement, message);
             break;
-        case 'DISCONNECTION_OF_THE_AGENT':
+        case 'DisconnectionOfTheAgent':
             message = {
                 senderId: serverMessage.userId,
                 text: 'The agent left the network, write a message to connect to the new agent or close the page, to exit the network',
@@ -199,7 +197,7 @@ function onMessageReceived(payload) {
             messageElement.classList.add('event-message');
             printMessage(messageElement, message);
             break;
-        case 'CALL_SEARCH_FREE_AGENT':
+        case 'CallSearchFreeAgent':
             break;
         default:
             alert('error');
