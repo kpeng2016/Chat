@@ -1,7 +1,8 @@
 package com.kirksova.server.model;
 
-import com.kirksova.server.model.enumType.TypeOfUser;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -13,28 +14,28 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class User {
 
-    private static List<User> agents = Collections.synchronizedList(new ArrayList<User>());
-    private static List<User> clients = Collections.synchronizedList(new ArrayList<User>());
-    private static AtomicLong isGenId = new AtomicLong();
+    private static AtomicLong genId = new AtomicLong();
 
+    private Socket userSocket;
+    private SimpMessageSendingOperations messagingTemplate;
     private TypeOfUser userType;
     private String name;
-    private boolean isFreeAgent;
-    private int countUsers = 0;
+    private boolean freeAgent;
+    private int userCount = 0;
     private long id;
 
     public User(TypeOfUser userT, String name) {
         this.userType = userT;
         this.name = name;
-        id = isGenId.incrementAndGet();
+        id = genId.incrementAndGet();
     }
 
     public void setFreeAgent(boolean freeAgent) {
-        isFreeAgent = userType == TypeOfUser.agent && freeAgent;
+        this.freeAgent = userType == TypeOfUser.AGENT && freeAgent;
     }
 
-    public boolean getIsFreeAgent() {
-        return isFreeAgent;
+    public boolean isFreeAgent() {
+        return freeAgent;
     }
 
     public TypeOfUser getUserType() {
@@ -49,19 +50,31 @@ public class User {
         return id;
     }
 
-    public Integer getCountUsers() {
-        return countUsers;
+    public Integer getUserCount() {
+        return userCount;
     }
 
-    public void setCountUsers(int countUsers) {
-        this.countUsers = countUsers;
+    public void iterateUserCount() {
+        this.userCount++;
     }
 
-    public List<User> getAgents() {
-        return agents;
+    public Socket getUserSocket() {
+        return userSocket;
     }
 
-    public List<User> getClients() {
-        return clients;
+    public void setUserSocket(Socket userSocket) {
+        this.userSocket = userSocket;
+    }
+
+    public SimpMessageSendingOperations getMessagingTemplate() {
+        return messagingTemplate;
+    }
+
+    public void setMessagingTemplate(SimpMessageSendingOperations messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    public enum TypeOfUser {
+        AGENT, CLIENT
     }
 }
