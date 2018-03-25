@@ -3,6 +3,8 @@ package com.kirksova.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kirksova.client.Message.MessageType;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -10,7 +12,6 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
-import org.apache.log4j.Logger;
 
 /**
  * Отправляем сообщения серверу
@@ -37,13 +38,14 @@ public class Client {
         } catch (IOException e) {
             log.debug("IOException", e);
         }
-
-
     }
 
     private static void processMessages(Scanner scannerUserMessageText, PrintWriter sendingMessagesToServer, MessageReader messageReader)
         throws JsonProcessingException {
         String strOut = "";
+        /**String str = "Highlight";
+        Base64.Encoder encoder = Base64.getEncoder();
+        String encodedString = encoder.encodeToString(str.getBytes());*/
         while (!EXIT.equals(strOut)) {
             Message message;
             strOut = scannerUserMessageText.nextLine();

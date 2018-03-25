@@ -4,15 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kirksova.server.model.Message;
 import com.kirksova.server.model.Message.MessageType;
 import com.kirksova.server.model.User;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.messaging.simp.SimpMessageSendingOperations;
-import org.springframework.stereotype.Service;
 
 @Service
 public class MessageService {
@@ -47,15 +47,10 @@ public class MessageService {
 
     public Message checkValidLeave(User user, User interlocutor) {
         if (interlocutor != null) {
-            if (user.getUserType() == User.TypeOfUser.CLIENT) {
-                log.info(
-                    "Dialogue between agent " + interlocutor.getName() + " and client " + user.getName() + " was over");
-                interlocutor.setFreeAgent(true);
-                return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
-            } else {
-                return new Message(user.getId(), agentCantLeave, MessageType.AGENT_CANT_LEAVE, interlocutor.getId(),
-                    interlocutor.getName());
-            }
+            log.info(
+                "Dialogue between agent " + interlocutor.getName() + " and client " + user.getName() + " was over");
+            interlocutor.setFreeAgent(true);
+            return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
         } else {
             return new Message(user.getId(), noActiveDialogue, MessageType.END_DIALOGUE);
         }

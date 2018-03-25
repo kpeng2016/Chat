@@ -3,7 +3,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
     <title>Spring Boot WebSocket Chat Application</title>
-    <link rel="stylesheet" href="/css/main.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body>
 <noscript>
@@ -14,19 +14,28 @@
     <div class="username-page-container">
         <div class="checkRegister">
         </div>
-        <h1 class="title">Enter role</h1>
-        <form id="userRole" role="userRole">
+        <form id="usernameForm" name="usernameForm">
+            <h1 class="title">Enter name and password for sign up</h1>
             <div class="form-group">
-                <input type="text" id="role" placeholder="Role" autocomplete="on" class="form-control"/>
+                <input type="text" id="nameSignUp" placeholder="Name" autocomplete="on" class="form-control"/>
+            </div>
+            <div class="form-group">
+                <input type="password" id="passwordSignUp" placeholder="Password" autocomplete="off" class="form-control"/>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="accent username-submit">Sign up</button>
             </div>
         </form>
-        <h1 class="title">Enter name</h1>
-        <form id="usernameForm" name="usernameForm">
+        <form id="signInForm" name="signInForm">
+            <h1 class="title">Enter name and password for sign in</h1>
             <div class="form-group">
-                <input type="text" id="name" placeholder="Username" autocomplete="on" class="form-control"/>
+                <input type="text" id="nameSignIn" placeholder="Name" autocomplete="on" class="form-control"/>
             </div>
             <div class="form-group">
-                <button type="submit" class="accent username-submit">Start Chatting</button>
+                <input type="password" id="passwordSignIn" placeholder="Password" autocomplete="off" class="form-control"/>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="accent username-submit">Sign in</button>
             </div>
         </form>
     </div>
@@ -61,6 +70,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-<script src="/js/main.js"></script>
+<script src="js/client.js"></script>
 </body>
 </html>

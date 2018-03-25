@@ -10,10 +10,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
-@PropertySource(value = "classpath:configuration.properties", encoding = "UTF-8")
+@PropertySource("classpath:configuration.properties")
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    @Value("${host.topic}")
+    @Value("${host.topicForConfig}")
     private String topic;
     @Value("${host.app}")
     private String app;

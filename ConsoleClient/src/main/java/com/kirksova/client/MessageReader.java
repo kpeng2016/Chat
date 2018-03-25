@@ -39,11 +39,12 @@ public class MessageReader implements Runnable {
                 message = mapper.readValue(serverMessage, new TypeReference<Message>() {
                 });
                 switch (message.getTypeOfMessage()) {
-                    case CALL_SEARCH_FREE_AGENT:
+                    case NO_CLIENT_IN_QUEUE:
                         break;
                     case MESSAGE_CHAT:
                         System.out.println(message.getNameTo() + STRING + message.getText());
                         break;
+                    case CONNECTED_AGENT:
                     case CONNECTED_CLIENT:
                     case DISCONNECTION_OF_THE_AGENT:
                     case DISCONNECTION_OF_THE_CLIENT:

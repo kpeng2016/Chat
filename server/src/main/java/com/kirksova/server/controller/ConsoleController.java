@@ -1,6 +1,6 @@
 package com.kirksova.server.controller;
 
-import com.kirksova.server.socket.ThreadSocket;
+/*import com.kirksova.server.socket.ThreadSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,5 +28,5 @@ public class ConsoleController implements CommandLineRunner {
             new Thread(threadSocket).start();
         }
     }
-}
+}*/
 

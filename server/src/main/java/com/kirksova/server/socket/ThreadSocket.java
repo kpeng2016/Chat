@@ -1,6 +1,6 @@
 package com.kirksova.server.socket;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+/*import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kirksova.server.model.Message;
 import com.kirksova.server.model.Message.MessageType;
@@ -20,12 +20,9 @@ import java.util.NoSuchElementException;
 import java.util.Scanner;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 @Component
-@PropertySource("classpath:configuration.properties")
 public class ThreadSocket implements Runnable {
 
     @Value("${message.correctRegistration}")
@@ -74,7 +71,7 @@ public class ThreadSocket implements Runnable {
                         return;
                     }
                     if (TypeOfUser.AGENT.equals(user.getUserType()) && userMessage.getTo() != null) {
-                        interlocutor = UserService.getClients().stream()
+                        interlocutor = UserService.getOnlineClients().stream()
                             .filter(user1 -> user1.getId().equals(userMessage.getTo())).findFirst().get();
                         continue;
                     }
@@ -85,7 +82,7 @@ public class ThreadSocket implements Runnable {
                     serverMessage = userService.searchForAnInterlocutor(userMessage);
                     outUserWriter.println(mapper.writeValueAsString(serverMessage));
                     if (user.getUserType() == TypeOfUser.CLIENT && serverMessage.getTo() != null) {
-                        interlocutor = UserService.getAgents().stream()
+                        interlocutor = UserService.getOnlineAgents().stream()
                             .filter(user1 -> user1.getId().equals(serverMessage.getTo())).findFirst().get();
                         serverMessage = userService.getAgentMessageAboutNewDialog(serverMessage);
                         sendMessageInterlocutor(serverMessage);
@@ -136,11 +133,11 @@ public class ThreadSocket implements Runnable {
     }
 
     private void register() throws IOException {
-        user = userService.validateAndRegister(userMessage);
+        user = userService.registerUser(userMessage);
         while (user == null) {
-            serverMessage = new Message(null, notValidRegistrationData, MessageType.NOT_VALID_REGISTRATION_DATA);
+            serverMessage = new Message(null, notValidRegistrationData, MessageType.INCORRECT_REGISTRATION_DATA);
             outUserWriter.println(mapper.writeValueAsString(serverMessage));
-            user = userService.validateAndRegister(userMessage);
+            user = userService.registerUser(userMessage);
         }
         serverMessage = new Message(user.getId(), correctRegistration, MessageType.CORRECT_REGISTRATION);
         outUserWriter.println(mapper.writeValueAsString(serverMessage));
@@ -188,7 +185,7 @@ public class ThreadSocket implements Runnable {
                     sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId()));
                     sendMessageInterlocutor(serverMessage);
                 }
-                UserService.getAgents().remove(user);
+                UserService.getOnlineAgents().remove(user);
             } else {
                 log.info("Disconnect client " + user.getName());
                 if (interlocutor != null) {
@@ -196,7 +193,7 @@ public class ThreadSocket implements Runnable {
                     sendMessageInterlocutor(messageService.checkValidLeave(user, interlocutor));
                     interlocutor.setFreeAgent(true);
                 }
-                UserService.getClients().remove(user);
+                UserService.getOnlineClients().remove(user);
             }
 
         } else {
@@ -215,4 +212,4 @@ public class ThreadSocket implements Runnable {
     public void setUserSocket(Socket userSocket) {
         this.userSocket = userSocket;
     }
-}
+}*/

@@ -3,10 +3,6 @@ package com.kirksova.server.model;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Класс для информации о пользователях.
@@ -14,21 +10,16 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class User {
 
-    private static AtomicLong genId = new AtomicLong();
-
+    private long id;
+    private String password;
+    private String name;
+    private TypeOfUser userType;
+    private int maxClientCount;
     private Socket userSocket;
     private SimpMessageSendingOperations messagingTemplate;
-    private TypeOfUser userType;
-    private String name;
     private boolean freeAgent;
-    private int userCount = 0;
-    private long id;
-
-    public User(TypeOfUser userT, String name) {
-        this.userType = userT;
-        this.name = name;
-        id = genId.incrementAndGet();
-    }
+    private int clientCountNow = 0;
+    private int clientCountTotal = 0;
 
     public void setFreeAgent(boolean freeAgent) {
         this.freeAgent = userType == TypeOfUser.AGENT && freeAgent;
@@ -50,12 +41,20 @@ public class User {
         return id;
     }
 
-    public Integer getUserCount() {
-        return userCount;
+    public Integer getClientCountTotal() {
+        return clientCountTotal;
     }
 
-    public void iterateUserCount() {
-        this.userCount++;
+    public void iterateClientCountTotal() {
+        this.clientCountTotal++;
+    }
+
+    public void iterateClientCountNow() {
+        this.clientCountTotal++;
+    }
+
+    public void deleteClientCountNow() {
+        this.clientCountTotal--;
     }
 
     public Socket getUserSocket() {
@@ -72,6 +71,45 @@ public class User {
 
     public void setMessagingTemplate(SimpMessageSendingOperations messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
+    }
+
+    public int getMaxClientCount() {
+        return maxClientCount;
+    }
+
+    public void setMaxClientCount(int maxClientCount) {
+        this.maxClientCount = maxClientCount;
+    }
+
+    public int getClientCountNow() {
+        return clientCountNow;
+    }
+
+    public void setClientCountNow(int clientCountNow) {
+        this.clientCountNow = clientCountNow;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setUserType(TypeOfUser userType) {
+        this.userType = userType;
+    }
+
+    public void setClientCountTotal(int clientCountTotal) {
+        this.clientCountTotal = clientCountTotal;
     }
 
     public enum TypeOfUser {

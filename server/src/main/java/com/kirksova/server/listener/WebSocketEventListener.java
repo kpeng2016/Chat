@@ -7,7 +7,6 @@ import com.kirksova.server.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -19,6 +18,8 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 public class WebSocketEventListener {
 
     private static final Logger log = Logger.getLogger(WebSocketEventListener.class);
+    @Autowired
+    private UserService userService;
     @Autowired
     private SimpMessageSendingOperations messagingTemplate;
     @Value("${host.topic}")
@@ -43,9 +44,10 @@ public class WebSocketEventListener {
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-        User interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
+        User interlocutor;
         if (user != null) {
-            if (user.getUserType() == User.TypeOfUser.AGENT) {
+            /**!!!!!*/if (user.getUserType() == User.TypeOfUser.AGENT) {
+                interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
                 log.info("Disconnect agent " + user.getName());
                 if (interlocutor != null) {
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
@@ -58,9 +60,10 @@ public class WebSocketEventListener {
                         MessageType.DISCONNECTION_OF_THE_AGENT);
                     messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
                 }
-                UserService.getAgents().remove(user);
+                UserService.getOnlineAgents().remove(user);
             } else {
                 log.info("Disconnect client " + user.getName());
+                interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
                 if (interlocutor != null) {
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                         + " was over");
@@ -71,9 +74,13 @@ public class WebSocketEventListener {
                     chatMessage = new Message(interlocutor.getId(), disconnectedOfTheClient,
                         MessageType.DISCONNECTION_OF_THE_CLIENT);
                     messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
-                    interlocutor.setFreeAgent(true);
+                    if (interlocutor.getClientCountNow() == interlocutor.getMaxClientCount()) {
+                        interlocutor.setFreeAgent(true);
+                    }
+                    interlocutor.deleteClientCountNow();
+                    userService.startDialogue(chatMessage, interlocutor);
                 }
-                UserService.getClients().remove(user);
+                UserService.getOnlineClients().remove(user);
             }
         } else {
             log.info("Disconnect no register user");
