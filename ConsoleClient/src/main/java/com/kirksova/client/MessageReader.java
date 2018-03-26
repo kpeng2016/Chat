@@ -44,6 +44,10 @@ public class MessageReader implements Runnable {
                     case MESSAGE_CHAT:
                         System.out.println(message.getNameTo() + STRING + message.getText());
                         break;
+                    case CORRECT_REGISTRATION:
+                    case CORRECT_LOGIN_NAME:
+                        System.out.println("Input password");
+                        break;
                     case CONNECTED_AGENT:
                     case CONNECTED_CLIENT:
                     case DISCONNECTION_OF_THE_AGENT:

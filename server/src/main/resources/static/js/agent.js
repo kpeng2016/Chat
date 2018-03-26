@@ -215,8 +215,8 @@ function onMessageReceived(payload) {
       nameInterlocutor = serverMessage.nameTo;
       break;
     case 'MESSAGE_CHAT':
-      to = serverMessage.to;
-      nameInterlocutor = serverMessage.nameTo;
+      //to = serverMessage.to;
+      //nameInterlocutor = serverMessage.nameTo;
       messageElement.classList.add('chat-message');
       var avatarElement = document.createElement('i');
       var avatarText = document.createTextNode(nameInterlocutor[0]);

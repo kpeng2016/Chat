@@ -5,6 +5,7 @@ import com.kirksova.server.model.Message.MessageType;
 import com.kirksova.server.model.User;
 import com.kirksova.server.model.UserEntity;
 import com.kirksova.server.queue.ClientQueue;
+import com.kirksova.server.util.UserEntityConverter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,10 +22,8 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
 
-    private static final String REGISTER_AGENT = "/register agent .+";
     private static final String REGISTER_CLIENT = "/register client .+";
-    private static final String REGISTER_CLIENT1 = "/register client ";
-    private static final String REGISTER_AGENT1 = "/register agent ";
+    private static final String REGISTER_AGENT = "/register agent .+";
     private static final String SIGN_IN_AGENT = "/sign in agent .+";
     private static final String SIGN_IN_CLIENT = "/sign in client .+";
     private static final Logger log = Logger.getLogger(UserService.class);
@@ -32,6 +31,8 @@ public class UserService {
     private static List<User> onlineClients = Collections.synchronizedList(new ArrayList<User>());
     private SimpMessageSendingOperations messagingTemplate;
     private SimpMessageHeaderAccessor headerAccessor;
+    @Autowired
+    private MessageService messageService;
     @Autowired
     private UserEntityService userEntityService;
     @Autowired
@@ -72,23 +73,23 @@ public class UserService {
     public Message registerUser(Message message) {
         String text = message.getText();
         if (text.matches(REGISTER_AGENT)) {
-            String[] name = text.trim().split(REGISTER_AGENT1);
-            if (!userEntityService.existsUserWithName(name[1])) {
+            String name = text.substring(REGISTER_AGENT.length() - 2);
+            if (!userEntityService.existsUserWithName(name)) {
                 UserEntity userEntity = new UserEntity();
                 userEntity.setUserType(User.TypeOfUser.AGENT);
-                userEntity.setName(name[1]);
-                log.info("Register agent " + name[1]);
+                userEntity.setName(name);
+                log.info("Register agent " + name);
                 userEntity = userEntityService.create(userEntity);
                 return new Message(userEntity.getId(), correctRegistration, MessageType.CORRECT_REGISTRATION);
             }
         }
         if (text.matches(REGISTER_CLIENT)) {
-            String[] name = text.trim().split(REGISTER_CLIENT1);
-            if (!userEntityService.existsUserWithName(name[1])) {
+            String name = text.substring(REGISTER_CLIENT.length() - 2);
+            if (!userEntityService.existsUserWithName(name)) {
                 UserEntity userEntity = new UserEntity();
                 userEntity.setUserType(User.TypeOfUser.CLIENT);
-                userEntity.setName(name[1]);
-                log.info("Register client " + name[1]);
+                userEntity.setName(name);
+                log.info("Register client " + name);
                 userEntity = userEntityService.create(userEntity);
                 return new Message(userEntity.getId(), correctRegistration, MessageType.CORRECT_REGISTRATION);
             }
@@ -120,9 +121,17 @@ public class UserService {
     private Message getMessage(String text, String regexString) {
         if (text.matches(regexString)) {
             String name = text.substring(regexString.length() - 2);
+            User.TypeOfUser role;
+            if (text.charAt(9) == 'c') {
+                role = User.TypeOfUser.CLIENT;
+            } else {
+                role = User.TypeOfUser.AGENT;
+            }
             if (userEntityService.existsUserWithName(name)) {
                 UserEntity userEntity = userEntityService.getUserByName(name);
-                return new Message(userEntity.getId(), correctRegistration, MessageType.CORRECT_LOGIN_NAME);
+                if (userEntity.getUserType() == role) {
+                    return new Message(userEntity.getId(), correctRegistration, MessageType.CORRECT_LOGIN_NAME);
+                }
             }
         }
         return null;
@@ -141,10 +150,10 @@ public class UserService {
             return new Message(message.getSenderId(), correctSignInData, MessageType.CORRECT_LOGIN_PASSWORD);
         }
         log.info("Not valid password data");
-        return new Message(null, incorrectLoginPassword, MessageType.INCORRECT_LOGIN_PASSWORD);
+        return new Message(message.getSenderId(), incorrectLoginPassword, MessageType.INCORRECT_LOGIN_PASSWORD);
     }
 
-    public void startDialogue(Message message, User user){
+    public void startDialogue(Message message, User user, SimpMessageHeaderAccessor headerAccessor) {
         while (user.getMaxClientCount() != user.getClientCountNow()) {
             message = deleteClientInQueue(message);
             if (message.getTypeOfMessage() == MessageType.NO_CLIENT_IN_QUEUE) {
@@ -158,7 +167,11 @@ public class UserService {
                 .filter(user1 -> user1.getId().equals(messageTo)).findFirst().get();
             headerAccessor.getSessionAttributes().put(sessionInterlocutor + messageTo, interlocutor);
             Message messageForClient = getClientMessageAboutNewDialog(message);
-            messagingTemplate.convertAndSend(topic + messageForClient.getSenderId(), messageForClient);
+            if (interlocutor.getMessagingTemplate() != null) {
+                messagingTemplate.convertAndSend(topic + messageForClient.getSenderId(), messageForClient);
+            } else {
+                messageService.sendMessageToSocket(interlocutor, messageForClient);
+            }
             user.iterateClientCountNow();
             user.iterateClientCountTotal();
         }
@@ -244,6 +257,30 @@ public class UserService {
             .findFirst().get();
         return new Message(message.getTo(), connectedAgent + user.getName(), MessageType.CONNECTED_AGENT,
             user.getId(), user.getName());
+    }
+
+    public void setClientSession(SimpMessageHeaderAccessor headerAccessor, UserEntity userEntity) {
+        if (userEntity.getUserType() == User.TypeOfUser.CLIENT) {
+            UserEntityConverter userEntityConverter = new UserEntityConverter();
+            User user = userEntityConverter.convertUserEntityToUser(userEntity);
+            user.setMessagingTemplate(messagingTemplate);
+            UserService.getOnlineClients().add(user);
+            headerAccessor.getSessionAttributes().put(sessionUser, user);
+        }
+    }
+
+    public void setAgentSession(SimpMessageHeaderAccessor headerAccessor, UserEntity userEntity) {
+        if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
+            UserEntityConverter userEntityConverter = new UserEntityConverter();
+            User user = userEntityConverter.convertUserEntityToUser(userEntity);
+            if (user.getMaxClientCount() == 0) {
+                user.setMaxClientCount(1);
+            }
+            user.setFreeAgent(true);
+            user.setMessagingTemplate(messagingTemplate);
+            headerAccessor.getSessionAttributes().put(sessionUser, user);
+            UserService.getOnlineAgents().add(user);
+        }
     }
 
     public static List<User> getOnlineAgents() {

@@ -7,7 +7,6 @@ import com.kirksova.server.model.UserEntity;
 import com.kirksova.server.service.MessageService;
 import com.kirksova.server.service.UserEntityService;
 import com.kirksova.server.service.UserService;
-import com.kirksova.server.util.UserEntityConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -56,11 +55,12 @@ public class WebSocketController {
     public void setPassword(@Payload Message registerMessage, SimpMessageHeaderAccessor headerAccessor) {
         userService.setPassword(registerMessage);
         UserEntity userEntity = userEntityService.getUserById(registerMessage.getSenderId());
-        setClientSession(headerAccessor, userEntity);
-        setAgentSession(headerAccessor, userEntity);
+        userService.setMessagingTemplate(messagingTemplate);
+        userService.setClientSession(headerAccessor, userEntity);
+        userService.setAgentSession(headerAccessor, userEntity);
         if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
             User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-            userService.startDialogue(registerMessage, user);
+            userService.startDialogue(registerMessage, user, headerAccessor);
         }
     }
 
@@ -71,11 +71,12 @@ public class WebSocketController {
             registerMessage);
         if (registerMessage.getTypeOfMessage() == MessageType.CORRECT_LOGIN_PASSWORD) {
             UserEntity userEntity = userEntityService.getUserById(registerMessage.getSenderId());
-            setClientSession(headerAccessor, userEntity);
-            setAgentSession(headerAccessor, userEntity);
+            userService.setMessagingTemplate(messagingTemplate);
+            userService.setClientSession(headerAccessor, userEntity);
+            userService.setAgentSession(headerAccessor, userEntity);
             if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
                 User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-                userService.startDialogue(registerMessage, user);
+                userService.startDialogue(registerMessage, user, headerAccessor);
             }
         }
     }
@@ -86,8 +87,9 @@ public class WebSocketController {
         message = userService.setMaxClientCount(message);
         messagingTemplate.convertAndSend(topic + message.getSenderId(), message);
         if (message.getTypeOfMessage() == MessageType.CORRECT_DATA_MAX_COUNT_CLIENTS) {
+            userService.setMessagingTemplate(messagingTemplate);
             User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-            userService.startDialogue(message, user);
+            userService.startDialogue(message, user, headerAccessor);
         }
     }
 
@@ -154,35 +156,13 @@ public class WebSocketController {
                 messageService.sendMessageToSocket(interlocutor, endDialog);
                 messageService.sendMessageToSocket(interlocutor, messageLeave);
             }
-            userService.startDialogue(message, interlocutor);
+            userService.setMessagingTemplate(messagingTemplate);
+            userService.startDialogue(message, interlocutor, headerAccessor);
         } else {
             messagingTemplate.convertAndSend(topic + user.getId(), message);
         }
     }
 
-    private void setClientSession(SimpMessageHeaderAccessor headerAccessor, UserEntity userEntity) {
-        if (userEntity.getUserType() == User.TypeOfUser.CLIENT) {
-            UserEntityConverter userEntityConverter = new UserEntityConverter();
-            User user = userEntityConverter.convertUserEntityToUser(userEntity);
-            user.setMessagingTemplate(messagingTemplate);
-            UserService.getOnlineClients().add(user);
-            headerAccessor.getSessionAttributes().put(sessionUser, user);
-        }
-    }
 
-    private void setAgentSession(SimpMessageHeaderAccessor headerAccessor, UserEntity userEntity) {
-        if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
-            UserEntityConverter userEntityConverter = new UserEntityConverter();
-            User user = userEntityConverter.convertUserEntityToUser(userEntity);
-            if (user.getMaxClientCount() == 0) {
-                user.setMaxClientCount(1);
-            }
-            user.setFreeAgent(true);
-            headerAccessor.getSessionAttributes().put(sessionUser, user);
-            userService.setMessagingTemplate(messagingTemplate);
-            user.setMessagingTemplate(messagingTemplate);
-            UserService.getOnlineAgents().add(user);
-        }
-    }
 }
 

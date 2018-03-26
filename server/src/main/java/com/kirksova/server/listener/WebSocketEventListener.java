@@ -78,7 +78,8 @@ public class WebSocketEventListener {
                         interlocutor.setFreeAgent(true);
                     }
                     interlocutor.deleteClientCountNow();
-                    userService.startDialogue(chatMessage, interlocutor);
+                    userService.setMessagingTemplate(messagingTemplate);
+                    userService.startDialogue(chatMessage, interlocutor, headerAccessor);
                 }
                 UserService.getOnlineClients().remove(user);
             }

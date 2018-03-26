@@ -47,10 +47,15 @@ public class MessageService {
 
     public Message checkValidLeave(User user, User interlocutor) {
         if (interlocutor != null) {
-            log.info(
-                "Dialogue between agent " + interlocutor.getName() + " and client " + user.getName() + " was over");
-            interlocutor.setFreeAgent(true);
-            return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
+            if (user.getUserType() == User.TypeOfUser.CLIENT) {
+                log.info(
+                    "Dialogue between agent " + interlocutor.getName() + " and client " + user.getName() + " was over");
+                interlocutor.setFreeAgent(true);
+                return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
+            } else {
+                return new Message(user.getId(), agentCantLeave, MessageType.AGENT_CANT_LEAVE, interlocutor.getId(),
+                    interlocutor.getName());
+            }
         } else {
             return new Message(user.getId(), noActiveDialogue, MessageType.END_DIALOGUE);
         }

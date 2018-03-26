@@ -1,13 +1,13 @@
 package com.kirksova.server.controller;
 
-/*import com.kirksova.server.socket.ThreadSocket;
-import java.net.ServerSocket;
-import java.net.Socket;
+import com.kirksova.server.socket.ThreadSocket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Controller;
+
+import java.net.ServerSocket;
+import java.net.Socket;
 
 @Controller
 public class ConsoleController implements CommandLineRunner {
@@ -28,5 +28,5 @@ public class ConsoleController implements CommandLineRunner {
             new Thread(threadSocket).start();
         }
     }
-}*/
+}
 
