@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.util.Map;
+
 @Component
 public class WebSocketEventListener {
 
@@ -46,10 +48,10 @@ public class WebSocketEventListener {
         User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
         User interlocutor;
         if (user != null) {
-            /**!!!!!*/if (user.getUserType() == User.TypeOfUser.AGENT) {
-                interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
+            if (user.getUserType() == User.TypeOfUser.AGENT) {
                 log.info("Disconnect agent " + user.getName());
-                if (interlocutor != null) {
+                for (Map.Entry<Long, User> entry: user.getClientsAgent().entrySet()){
+                    interlocutor = entry.getValue();
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                         + " was over");
                     Message chatMessage = new Message(user.getId(), endDialogue, MessageType.END_DIALOGUE);
@@ -60,6 +62,7 @@ public class WebSocketEventListener {
                         MessageType.DISCONNECTION_OF_THE_AGENT);
                     messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
                 }
+                user.getClientsAgent().clear();
                 UserService.getOnlineAgents().remove(user);
             } else {
                 log.info("Disconnect client " + user.getName());
@@ -78,8 +81,9 @@ public class WebSocketEventListener {
                         interlocutor.setFreeAgent(true);
                     }
                     interlocutor.deleteClientCountNow();
+                    interlocutor.getClientsAgent().remove(user.getId(), user);
                     userService.setMessagingTemplate(messagingTemplate);
-                    userService.startDialogue(chatMessage, interlocutor, headerAccessor);
+                    userService.startDialogue(chatMessage, interlocutor);
                 }
                 UserService.getOnlineClients().remove(user);
             }

@@ -50,7 +50,8 @@ public class MessageService {
             if (user.getUserType() == User.TypeOfUser.CLIENT) {
                 log.info(
                     "Dialogue between agent " + interlocutor.getName() + " and client " + user.getName() + " was over");
-                interlocutor.setFreeAgent(true);
+                interlocutor.deleteClientCountNow();
+                interlocutor.getClientsAgent().remove(user.getId(), user);
                 return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
             } else {
                 return new Message(user.getId(), agentCantLeave, MessageType.AGENT_CANT_LEAVE, interlocutor.getId(),

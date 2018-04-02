@@ -60,7 +60,7 @@ public class WebSocketController {
         userService.setAgentSession(headerAccessor, userEntity);
         if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
             User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-            userService.startDialogue(registerMessage, user, headerAccessor);
+            userService.startDialogue(registerMessage, user);
         }
     }
 
@@ -76,7 +76,7 @@ public class WebSocketController {
             userService.setAgentSession(headerAccessor, userEntity);
             if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
                 User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-                userService.startDialogue(registerMessage, user, headerAccessor);
+                userService.startDialogue(registerMessage, user);
             }
         }
     }
@@ -89,27 +89,20 @@ public class WebSocketController {
         if (message.getTypeOfMessage() == MessageType.CORRECT_DATA_MAX_COUNT_CLIENTS) {
             userService.setMessagingTemplate(messagingTemplate);
             User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-            userService.startDialogue(message, user, headerAccessor);
+            userService.startDialogue(message, user);
         }
     }
 
     @MessageMapping("/chat.sendMessageInterlocutor")
     public void sendMessageInterlocutor(@Payload Message chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-        User interlocutor;
-        if (user.getUserType() == User.TypeOfUser.CLIENT) {
+        User interlocutor = user.getClientsAgent().get(chatMessage.getTo());
+        if (interlocutor == null) {
             interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
             if (interlocutor == null) {
                 interlocutor = UserService.getOnlineAgents().stream()
                     .filter(user1 -> user1.getId().equals(chatMessage.getTo())).findFirst().get();
                 headerAccessor.getSessionAttributes().put(sessionInterlocutor, interlocutor);
-            }
-        } else {
-            interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor + chatMessage.getTo());
-            if (interlocutor == null) {
-                interlocutor = UserService.getOnlineClients().stream()
-                    .filter(user1 -> user1.getId().equals(chatMessage.getTo())).findFirst().get();
-                headerAccessor.getSessionAttributes().put(sessionInterlocutor + chatMessage.getTo(), interlocutor);
             }
         }
         if (interlocutor.getUserSocket() == null) {
@@ -148,7 +141,6 @@ public class WebSocketController {
             Message endDialog = messageService.endDialogMessage(user.getId());
             messagingTemplate.convertAndSend(topic + messageLeave.getSenderId(), endDialog);
             endDialog = messageService.endDialogMessage(messageLeave.getTo());
-            interlocutor.deleteClientCountNow();
             if (interlocutor.getUserSocket() == null) {
                 messagingTemplate.convertAndSend(topic + messageLeave.getTo(), endDialog);
                 messagingTemplate.convertAndSend(topic + messageLeave.getTo(), message);
@@ -157,7 +149,7 @@ public class WebSocketController {
                 messageService.sendMessageToSocket(interlocutor, messageLeave);
             }
             userService.setMessagingTemplate(messagingTemplate);
-            userService.startDialogue(message, interlocutor, headerAccessor);
+            userService.startDialogue(message, interlocutor);
         } else {
             messagingTemplate.convertAndSend(topic + user.getId(), message);
         }

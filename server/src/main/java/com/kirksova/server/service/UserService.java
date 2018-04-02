@@ -69,6 +69,8 @@ public class UserService {
     private String incorrectDataMaxCountClients;
     @Value("${message.correctDataMaxCountClients}")
     private String correctDataMaxCountClients;
+    @Value("${message.notUpdateDataMaxCountClients}")
+    private String notUpdateDataMaxCountClients;
 
     public Message registerUser(Message message) {
         String text = message.getText();
@@ -153,7 +155,7 @@ public class UserService {
         return new Message(message.getSenderId(), incorrectLoginPassword, MessageType.INCORRECT_LOGIN_PASSWORD);
     }
 
-    public void startDialogue(Message message, User user, SimpMessageHeaderAccessor headerAccessor) {
+    public void startDialogue(Message message, User user) {
         while (user.getMaxClientCount() != user.getClientCountNow()) {
             message = deleteClientInQueue(message);
             if (message.getTypeOfMessage() == MessageType.NO_CLIENT_IN_QUEUE) {
@@ -165,7 +167,7 @@ public class UserService {
             Long messageTo = message.getTo();
             User interlocutor = onlineClients.stream()
                 .filter(user1 -> user1.getId().equals(messageTo)).findFirst().get();
-            headerAccessor.getSessionAttributes().put(sessionInterlocutor + messageTo, interlocutor);
+            user.getClientsAgent().put(messageTo, interlocutor);
             Message messageForClient = getClientMessageAboutNewDialog(message);
             if (interlocutor.getMessagingTemplate() != null) {
                 messagingTemplate.convertAndSend(topic + messageForClient.getSenderId(), messageForClient);
@@ -185,7 +187,12 @@ public class UserService {
             return new Message(message.getSenderId(), incorrectDataMaxCountClients,
                 MessageType.INCORRECT_DATA_MAX_COUNT_CLIENTS);
         }
-
+        if(maxClientCount == user.getMaxClientCount()){
+            return new Message(message.getSenderId(), notUpdateDataMaxCountClients,
+                MessageType.INCORRECT_DATA_MAX_COUNT_CLIENTS);
+        }
+        user.setMaxClientCount(maxClientCount);
+        user.setFreeAgent(true);
         UserEntity userEntity = userEntityService.getUserById(message.getSenderId());
         userEntity.setMaxClientCount(maxClientCount);
         userEntityService.update(userEntity);
@@ -200,6 +207,14 @@ public class UserService {
             }
         }
         clientQueue.push(user);
+    }
+
+    public List<User> getClientsInQueue() {
+        List<User> clients = new ArrayList<>();
+        for (int i = 0; i < clientQueue.size(); i++) {
+            clients.add(clientQueue.get(i));
+        }
+        return clients;
     }
 
     public Message deleteClientInQueue(Message message) {
@@ -223,6 +238,7 @@ public class UserService {
                 User interlocutor = freeAgents.get(0);
                 interlocutor.iterateClientCountTotal();
                 interlocutor.iterateClientCountNow();
+                interlocutor.getClientsAgent().put(userId, user);
                 log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                     + " was started");
                 if (interlocutor.getMaxClientCount() == interlocutor.getClientCountNow()) {

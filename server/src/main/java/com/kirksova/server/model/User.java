@@ -1,8 +1,13 @@
 package com.kirksova.server.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Класс для информации о пользователях.
@@ -10,16 +15,40 @@ import java.net.Socket;
 
 public class User {
 
+    @JsonIgnore
+    private List<Message> messagesForInterlocutor = new ArrayList<>();
+    @JsonIgnore
+    private Map<Long, User> clientsAgent = new HashMap<>();
     private long id;
+    @JsonIgnore
     private String password;
     private String name;
     private TypeOfUser userType;
     private int maxClientCount;
+    @JsonIgnore
     private Socket userSocket;
+    @JsonIgnore
     private SimpMessageSendingOperations messagingTemplate;
     private boolean freeAgent;
+    @JsonIgnore
     private int clientCountNow = 0;
+    @JsonIgnore
     private int clientCountTotal = 0;
+
+    public User(){
+
+    }
+
+    public User(String name, String password){
+        this.name = name;
+        this.password = password;
+    }
+
+    public User(String name, String password, Integer maxClientCount){
+        this.name = name;
+        this.password = password;
+        this.maxClientCount = maxClientCount;
+    }
 
     public void setFreeAgent(boolean freeAgent) {
         this.freeAgent = userType == TypeOfUser.AGENT && freeAgent;
@@ -50,11 +79,11 @@ public class User {
     }
 
     public void iterateClientCountNow() {
-        this.clientCountTotal++;
+        this.clientCountNow++;
     }
 
     public void deleteClientCountNow() {
-        this.clientCountTotal--;
+        this.clientCountNow--;
     }
 
     public Socket getUserSocket() {
@@ -85,13 +114,10 @@ public class User {
         return clientCountNow;
     }
 
-    public void setClientCountNow(int clientCountNow) {
-        this.clientCountNow = clientCountNow;
-    }
-
     public String getPassword() {
         return password;
     }
+
     public void setId(long id) {
         this.id = id;
     }
@@ -108,8 +134,12 @@ public class User {
         this.userType = userType;
     }
 
-    public void setClientCountTotal(int clientCountTotal) {
-        this.clientCountTotal = clientCountTotal;
+    public Map<Long, User> getClientsAgent() {
+        return clientsAgent;
+    }
+
+    public List<Message> getMessagesForInterlocutor() {
+        return messagesForInterlocutor;
     }
 
     public enum TypeOfUser {

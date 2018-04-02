@@ -5,11 +5,13 @@ import org.springframework.stereotype.Repository;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import java.util.List;
 
 @Repository
 public class UserEntityDao {
 
-    public static final String SELECT_BY_USERNAME_QUERY = "from UserEntity u where u.name = :username";
+    private static final String SELECT_BY_USERNAME_QUERY = "from UserEntity u where u.name = :username";
+    private static final String SELECT_BY_ROLE_QUERY = "from UserEntity u where u.userType = :role";
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -31,6 +33,12 @@ public class UserEntityDao {
         Query query = entityManager.createQuery(SELECT_BY_USERNAME_QUERY, UserEntity.class);
         query.setParameter("username", username);
         return (UserEntity) query.getSingleResult();
+    }
+
+    public List<UserEntity> getAllUserByRole(User.TypeOfUser role) {
+        Query query = entityManager.createQuery(SELECT_BY_ROLE_QUERY, UserEntity.class);
+        query.setParameter("role", role);
+        return query.getResultList();
     }
 
     public boolean existsUserWithName(String username) {

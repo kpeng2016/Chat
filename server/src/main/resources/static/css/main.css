@@ -162,6 +162,19 @@ button.leave {
     margin-top: 100px;
 }
 
+#tabs ul {
+    list-style-type: none;
+    background-color: #FFF;
+    margin: 0;
+    overflow: auto;
+    overflow-y: scroll;
+    padding: 0 20px 0px 20px;
+    height: calc(100% - 150px);
+}
+
+#tab-content {
+}
+
 #chat-page ul {
     list-style-type: none;
     background-color: #FFF;
@@ -183,8 +196,19 @@ button.leave {
     border-bottom: 1px solid #f4f4f4;
 }
 
+#tabs ul li {
+    line-height: 1.5rem;
+    padding: 10px 20px;
+    margin: 0;
+    border-bottom: 1px solid #f4f4f4;
+}
+
 #chat-page ul li p {
     margin: 0;
+}
+
+#tabs .close {
+    margin-left: 7px;
 }
 
 #chat-page .event-message {
@@ -274,8 +298,13 @@ button.leave {
 }
 
 @media screen and (max-width: 730px) {
-
     .chat-container {
+        margin-left: 10px;
+        margin-right: 10px;
+        margin-top: 10px;
+    }
+
+    .nav-tabs{
         margin-left: 10px;
         margin-right: 10px;
         margin-top: 10px;
@@ -296,6 +325,10 @@ button.leave {
 
     #chat-page ul {
         height: calc(100% - 120px);
+    }
+
+    #tabs ul {
+        height: calc(100% - 10px);
     }
 
     #messageForm .input-group button {

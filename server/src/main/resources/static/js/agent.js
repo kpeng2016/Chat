@@ -21,7 +21,8 @@ var userMessage = null;
 var subscription = null;
 var message = null;
 var nameInterlocutor = null;
-var listIdClients = [];
+var mapName = new Map();
+var button='<button class="close" type="button" title="Remove this page">×</button>';
 
 var colors = [
   '#2196F3', '#32c787', '#00BCD4', '#ff5652',
@@ -132,12 +133,17 @@ function sendMessage(event) {
     if (!to) {
       messageElement.classList.add('chat-message');
       settingMessageUser(messageElement);
-      printMessage(messageElement, userMessage);
+      $('#tab-list').append($('<li><a href="#tab' + to + '" role="tab" data-toggle="tab">Tab ' + to + '</a></li>'));
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>').appendTo('.tab-content');
+      //printMessage(messageElement, userMessage);
       stompClient.send("/app/chat.search", {}, JSON.stringify(userMessage));
     } else {
       messageElement.classList.add('chat-message');
       settingMessageUser(messageElement);
-      printMessage(messageElement, userMessage);
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>').appendTo('.tab-content');
+      //printMessage(messageElement, userMessage);
       stompClient.send("/app/chat.sendMessageInterlocutor", {},
           JSON.stringify(userMessage));
     }
@@ -165,10 +171,6 @@ function onMessageReceived(payload) {
       checkRegister.textContent = 'Wrong password, please refresh this page to try again!';
       checkRegister.style.color = 'red';
       break;
-    case 'INCORRECT_DATA_MAX_COUNT_CLIENTS':
-      connectingElement.textContent = 'Wrong data, please to try again!';
-      connectingElement.style.color = 'red';
-      break;
     case 'CORRECT_REGISTRATION':
       subscription.unsubscribe('/topic/start', onMessageReceived);
       userId = serverMessage.senderId;
@@ -190,50 +192,46 @@ function onMessageReceived(payload) {
       chatPage.classList.remove('hidden');
       connectingElement.classList.add('hidden');
       messageElement.classList.add('event-message');
-      printMessage(messageElement, serverMessage);
-      break;
-    case 'CORRECT_DATA_MAX_COUNT_CLIENTS':
-      messageElement.classList.add('event-message');
-      printMessage(messageElement, serverMessage);
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
+      //printMessage(messageElement, serverMessage);
       break;
     case 'CONNECTED_CLIENT':
       nameInterlocutor = serverMessage.nameTo;
       to = serverMessage.to;
-      $('<li><a href="#tab'+to+'" data-toggle="tab">'+nameInterlocutor+'</a></li>').appendTo('#tabs');
-      $('#tabs a:last').tab('show');
-      listIdClients.push(to);
+      mapName.set(to, nameInterlocutor);
+      $('#tabs').append($('<li><a href="#tab' + to + '" data-toggle="tab">' + nameInterlocutor + '</a></li>'));
+      //$('<li><a href="#tab'+to+'" data-toggle="tab">'+nameInterlocutor+'</a></li>').appendTo('#tabs');
+      $('#tabs').find('a:last').tab('show');
       messageElement.classList.add('event-message');
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
       //printMessage(messageElement, serverMessage);
       break;
     case 'END_DIALOGUE':
       messageElement.classList.add('event-message');
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
       //printMessage(messageElement, serverMessage);
       to = serverMessage.to;
-      listIdClients.remove(listIdClients.indexOf(to));
       nameInterlocutor = serverMessage.nameTo;
       break;
     case 'MESSAGE_CHAT':
-      //to = serverMessage.to;
-      //nameInterlocutor = serverMessage.nameTo;
+      to = serverMessage.senderId;
       messageElement.classList.add('chat-message');
-      var avatarElement = document.createElement('i');
-      var avatarText = document.createTextNode(nameInterlocutor[0]);
-      avatarElement.appendChild(avatarText);
-      avatarElement.style['background-color'] = getAvatarColor(userId);
-      messageElement.appendChild(avatarElement);
-      var usernameElement = document.createElement('span');
-      var usernameText = document.createTextNode(nameInterlocutor);
-      usernameElement.appendChild(usernameText);
-      messageElement.appendChild(usernameElement);
-      printMessage(messageElement, serverMessage);
+      settingMessageInterlocutor(messageElement, serverMessage);
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
+      //printMessage(messageElement, serverMessage);
       break;
+    case 'INCORRECT_DATA_MAX_COUNT_CLIENTS':
+    case 'CORRECT_DATA_MAX_COUNT_CLIENTS':
     case 'NO_FREE_AGENT':
     case 'FIRST_MESSAGE_AGENT':
-    case 'AGENT_CANT_LEAVE':
       messageElement.classList.add('event-message');
-      printMessage(messageElement, serverMessage);
+      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
+      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
+      //printMessage(messageElement, serverMessage);
       break;
     case 'LEAVE_CLIENT':
     case 'DISCONNECTION_OF_THE_CLIENT':
@@ -242,14 +240,29 @@ function onMessageReceived(payload) {
         text: 'The client left the chat, wait until the new client connects or closes the page to exit the network',
         typeOfMessage: serverMessage.typeOfMessage
       };
+      $('#tabs').append($('<li><a href="#tab' + to + '" data-toggle="tab">' + nameInterlocutor + '<button class="close" type="button" title="Remove this page">×</button></a></li>'));
       messageElement.classList.add('event-message');
-      printMessage(messageElement, message);
+      $('#tab-content').append($('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, message) +'</div>').appendTo('.tab-content'));
+      //printMessage(messageElement, message);
       break;
     case 'noClientInQueue':
       break;
     default:
       alert('error');
   }
+}
+
+function settingMessageInterlocutor(messageElement) {
+  nameInterlocutor = mapName.get(to);
+  var avatarElement = document.createElement('i');
+  var avatarText = document.createTextNode(nameInterlocutor[0]);
+  avatarElement.appendChild(avatarText);
+  avatarElement.style['background-color'] = getAvatarColor(to);
+  messageElement.appendChild(avatarElement);
+  var usernameElement = document.createElement('span');
+  var usernameText = document.createTextNode(nameInterlocutor);
+  usernameElement.appendChild(usernameText);
+  messageElement.appendChild(usernameElement);
 }
 
 function settingMessageUser(messageElement) {
@@ -281,6 +294,26 @@ function getAvatarColor(messageSender) {
   var index = Math.abs(hash % colors.length);
   return colors[index];
 }
+
+function resetTab(){
+  var tabs=$("#tabs").find("li:not(:first)");
+  $(tabs).each(function(k,v){
+    $(this).find('a').html('Tab ' + to + button);
+  });
+}
+
+$(document).ready(function() {
+    $('#tabs').on('click', '.close', function() {
+    var tabID = $(this).parents('a').attr('href');
+    $(this).parents('li').remove();
+    $(tabID).remove();
+
+    //display first tab
+    var tabFirst = $('#tabs').find('a:first');
+    resetTab();
+    tabFirst.tab('show');
+  });
+});
 
 registerForm.addEventListener('submit', registerConnect, true);
 signInForm.addEventListener('submit', signInConnect, true);

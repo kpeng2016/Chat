@@ -170,6 +170,11 @@ function onMessageReceived(payload) {
       checkRegister.textContent = 'Wrong data, this name is not registered yet, please refresh this page to try again!';
       checkRegister.style.color = 'red';
       break;
+    case 'INCORRECT_LOGIN_PASSWORD':
+      subscription.unsubscribe('/topic/start', onMessageReceived);
+      checkRegister.textContent = 'Wrong password, please refresh this page to try again!';
+      checkRegister.style.color = 'red';
+      break;
     case 'CORRECT_REGISTRATION':
       subscription.unsubscribe('/topic/start', onMessageReceived);
       userId = serverMessage.senderId;

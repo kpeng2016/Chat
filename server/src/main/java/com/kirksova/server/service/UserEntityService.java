@@ -1,10 +1,13 @@
 package com.kirksova.server.service;
 
+import com.kirksova.server.model.User;
 import com.kirksova.server.model.UserEntity;
 import com.kirksova.server.model.UserEntityDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @Transactional
@@ -23,6 +26,10 @@ public class UserEntityService {
 
     public UserEntity getUserById(long id) {
         return userEntityDao.getUserById(id);
+    }
+
+    public List<UserEntity> getAllUserByRole(User.TypeOfUser role) {
+        return userEntityDao.getAllUserByRole(role);
     }
 
     public UserEntity getUserByName(String username) {
