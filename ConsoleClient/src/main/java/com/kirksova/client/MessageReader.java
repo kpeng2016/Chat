@@ -42,7 +42,7 @@ public class MessageReader implements Runnable {
                     case NO_CLIENT_IN_QUEUE:
                         break;
                     case MESSAGE_CHAT:
-                        System.out.println(message.getNameTo() + STRING + message.getText());
+                        System.out.println(message.getSenderName() + STRING + message.getText());
                         break;
                     case CORRECT_REGISTRATION:
                     case CORRECT_LOGIN_NAME:

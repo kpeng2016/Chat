@@ -107,7 +107,7 @@ function leave(event) {
     text: 'leave',
     typeOfMessage: 'MESSAGE_CHAT',
     to: to,
-    nameTo: nameInterlocutor
+    senderName: username
   };
   stompClient.send("/app/chat.leave", {}, JSON.stringify(userMessage));
   event.preventDefault();
@@ -122,7 +122,7 @@ function sendMessage(event) {
       text: messageInput.value,
       typeOfMessage: 'MESSAGE_CHAT',
       to: to,
-      nameTo: nameInterlocutor
+      senderName: username
     };
     if (!to) {
       messageList.push(userMessage.text);
@@ -142,14 +142,14 @@ function sendMessage(event) {
   event.preventDefault();
 }
 
-function printMessageClientBeforeStartedDialogue() {
+function sendMessageClientBeforeStartedDialogue() {
   for (var i = 0; i < messageList.length; i++) {
     userMessage = {
       senderId: userId,
       text: messageList[i],
       typeOfMessage: 'MESSAGE_CHAT',
       to: to,
-      nameTo: nameInterlocutor
+      senderName: username
     };
     stompClient.send("/app/chat.sendMessageInterlocutor", {},
         JSON.stringify(userMessage));
@@ -202,16 +202,16 @@ function onMessageReceived(payload) {
     case 'CONNECTED_AGENT':
       messageElement.classList.add('event-message');
       printMessage(messageElement, serverMessage);
-      to = serverMessage.to;
-      nameInterlocutor = serverMessage.nameTo;
-      printMessageClientBeforeStartedDialogue();
+      to = serverMessage.senderId;
+      nameInterlocutor = serverMessage.senderName;
+      sendMessageClientBeforeStartedDialogue();
       messageList = [];
       break;
     case 'END_DIALOGUE':
       messageElement.classList.add('event-message');
       printMessage(messageElement, serverMessage);
-      to = serverMessage.to;
-      nameInterlocutor = serverMessage.nameTo;
+      to = serverMessage.senderId;
+      nameInterlocutor = serverMessage.senderName;
       break;
     case 'MESSAGE_CHAT':
       messageElement.classList.add('chat-message');

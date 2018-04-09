@@ -3,6 +3,7 @@ package com.kirksova.server.listener;
 import com.kirksova.server.model.Message;
 import com.kirksova.server.model.Message.MessageType;
 import com.kirksova.server.model.User;
+import com.kirksova.server.service.MessageService;
 import com.kirksova.server.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,8 @@ import java.util.Map;
 public class WebSocketEventListener {
 
     private static final Logger log = Logger.getLogger(WebSocketEventListener.class);
+    @Autowired
+    private MessageService messageService;
     @Autowired
     private UserService userService;
     @Autowired
@@ -54,13 +57,22 @@ public class WebSocketEventListener {
                     interlocutor = entry.getValue();
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                         + " was over");
-                    Message chatMessage = new Message(user.getId(), endDialogue, MessageType.END_DIALOGUE);
-                    messagingTemplate.convertAndSend(topic + user.getId(), chatMessage);
-                    chatMessage = new Message(interlocutor.getId(), endDialogue, MessageType.END_DIALOGUE);
-                    messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
-                    chatMessage = new Message(interlocutor.getId(), disconnectedOfTheAgent,
+                    messagingTemplate.convertAndSend(topic + user.getId(), messageService.endDialogMessage(user.getId(), interlocutor));
+                    Message chatMessage = messageService.endDialogMessage(interlocutor.getId(), user);
+                    Message disconnectedMessage = new Message(interlocutor.getId(), disconnectedOfTheAgent,
                         MessageType.DISCONNECTION_OF_THE_AGENT);
-                    messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
+                    if(interlocutor.getMessagingTemplate() != null) {
+                        messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
+                        messagingTemplate.convertAndSend(topic + interlocutor.getId(), disconnectedMessage);
+                    }
+                    if(interlocutor.getUserSocket() != null){
+                        messageService.sendMessageToSocket(interlocutor, chatMessage);
+                        messageService.sendMessageToSocket(interlocutor, disconnectedMessage);
+                    }
+                    if(interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null){
+                        messageService.sendMessageToRest(interlocutor, chatMessage);
+                        messageService.sendMessageToRest(interlocutor, disconnectedMessage);
+                    }
                 }
                 user.getClientsAgent().clear();
                 UserService.getOnlineAgents().remove(user);
@@ -70,15 +82,21 @@ public class WebSocketEventListener {
                 if (interlocutor != null) {
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                         + " was over");
-                    Message chatMessage = new Message(user.getId(), endDialogue, MessageType.END_DIALOGUE);
-                    messagingTemplate.convertAndSend(topic + user.getId(), chatMessage);
-                    chatMessage = new Message(interlocutor.getId(), endDialogue, MessageType.END_DIALOGUE);
-                    messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
-                    chatMessage = new Message(interlocutor.getId(), disconnectedOfTheClient,
+                    messagingTemplate.convertAndSend(topic + user.getId(), messageService.endDialogMessage(user.getId(), interlocutor));
+                    Message chatMessage = messageService.endDialogMessage(interlocutor.getId(), user);
+                    Message disconnectedMessage = new Message(interlocutor.getId(), disconnectedOfTheClient,
                         MessageType.DISCONNECTION_OF_THE_CLIENT);
-                    messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
-                    if (interlocutor.getClientCountNow() == interlocutor.getMaxClientCount()) {
-                        interlocutor.setFreeAgent(true);
+                    if(interlocutor.getMessagingTemplate() != null) {
+                        messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
+                        messagingTemplate.convertAndSend(topic + interlocutor.getId(), disconnectedMessage);
+                    }
+                    if(interlocutor.getUserSocket() != null){
+                        messageService.sendMessageToSocket(interlocutor, chatMessage);
+                        messageService.sendMessageToSocket(interlocutor, disconnectedMessage);
+                    }
+                    if(interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null){
+                        messageService.sendMessageToRest(interlocutor, chatMessage);
+                        messageService.sendMessageToRest(interlocutor, disconnectedMessage);
                     }
                     interlocutor.deleteClientCountNow();
                     interlocutor.getClientsAgent().remove(user.getId(), user);

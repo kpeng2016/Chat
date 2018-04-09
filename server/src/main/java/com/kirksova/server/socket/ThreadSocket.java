@@ -114,8 +114,8 @@ public class ThreadSocket implements Runnable {
             }
             if (serverMessage.getTypeOfMessage() == MessageType.LEAVE_CLIENT) {
                 outUserWriter
-                    .println(mapper.writeValueAsString(messageService.endDialogMessage(user.getId())));
-                sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId()));
+                    .println(mapper.writeValueAsString(messageService.endDialogMessage(user.getId(), interlocutor)));
+                sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId(), user));
                 interlocutor = null;
                 return;
             }
@@ -254,7 +254,7 @@ public class ThreadSocket implements Runnable {
         if (message.getTypeOfMessage() == MessageType.NO_CLIENT_IN_QUEUE) {
             return;
         }
-        log.info("Dialogue between agent " + message.getNameTo() + " and client " + user.getName() + " was started");
+        log.info("Dialogue between agent " + message.getSenderName() + " and client " + user.getName() + " was started");
         outUserWriter.println(mapper.writeValueAsString(message));
         Long messageTo = message.getTo();
         interlocutor = UserService.getOnlineClients().stream().filter(user1 -> user1.getId().equals(messageTo))
@@ -289,7 +289,7 @@ public class ThreadSocket implements Runnable {
             userMessage = convertJsonInMessage();
         }
         if (exit.equals(userMessage.getText())) {
-            outUserWriter.println(mapper.writeValueAsString(messageService.endDialogMessage(user.getId())));
+            outUserWriter.println(mapper.writeValueAsString(messageService.endDialogMessage(user.getId(), interlocutor)));
             disconnectUser();
             return null;
         }
@@ -303,14 +303,14 @@ public class ThreadSocket implements Runnable {
                 if (interlocutor != null) {
                     serverMessage = new Message(interlocutor.getId(), disconnectedOfTheAgent,
                         MessageType.DISCONNECTION_OF_THE_AGENT);
-                    sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId()));
+                    sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId(), user));
                     sendMessageInterlocutor(serverMessage);
                 }
                 UserService.getOnlineAgents().remove(user);
             } else {
                 log.info("Disconnect client " + user.getName());
                 if (interlocutor != null) {
-                    sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId()));
+                    sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId(), user));
                     sendMessageInterlocutor(messageService.checkValidLeave(user, interlocutor));
                     interlocutor.setFreeAgent(true);
                 }

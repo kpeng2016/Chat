@@ -35,21 +35,6 @@ public class User {
     @JsonIgnore
     private int clientCountTotal = 0;
 
-    public User(){
-
-    }
-
-    public User(String name, String password){
-        this.name = name;
-        this.password = password;
-    }
-
-    public User(String name, String password, Integer maxClientCount){
-        this.name = name;
-        this.password = password;
-        this.maxClientCount = maxClientCount;
-    }
-
     public void setFreeAgent(boolean freeAgent) {
         this.freeAgent = userType == TypeOfUser.AGENT && freeAgent;
     }

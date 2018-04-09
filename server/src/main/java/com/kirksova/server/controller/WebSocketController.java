@@ -105,12 +105,15 @@ public class WebSocketController {
                 headerAccessor.getSessionAttributes().put(sessionInterlocutor, interlocutor);
             }
         }
-        if (interlocutor.getUserSocket() == null) {
-            chatMessage.setNameTo(user.getName());
-            messagingTemplate.convertAndSend(topic + chatMessage.getTo(), chatMessage);
-        } else {
-            chatMessage.setNameTo(user.getName());
+        chatMessage.setSenderName(user.getName());
+        if (interlocutor.getMessagingTemplate() != null) {
+            messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
+        }
+        if (interlocutor.getUserSocket() != null) {
             messageService.sendMessageToSocket(interlocutor, chatMessage);
+        }
+        if (interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null) {
+            interlocutor.getMessagesForInterlocutor().add(chatMessage);
         }
     }
 
@@ -120,12 +123,16 @@ public class WebSocketController {
         message = userService.searchForAnInterlocutor(message);
         User interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
         if (interlocutor != null) {
-            messagingTemplate.convertAndSend(topic + message.getSenderId(), message);
+            messagingTemplate.convertAndSend(topic + message.getTo(), message);
             message = userService.getAgentMessageAboutNewDialog(message);
-            if (interlocutor.getUserSocket() == null) {
+            if (interlocutor.getMessagingTemplate() != null) {
                 messagingTemplate.convertAndSend(topic + interlocutor.getId(), message);
-            } else {
+            }
+            if (interlocutor.getUserSocket() != null) {
                 messageService.sendMessageToSocket(interlocutor, message);
+            }
+            if (interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null) {
+                interlocutor.getMessagesForInterlocutor().add(message);
             }
         } else {
             messagingTemplate.convertAndSend(topic + message.getSenderId(), message);
@@ -138,18 +145,24 @@ public class WebSocketController {
         User interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
         Message message = messageService.checkValidLeave(user, interlocutor);
         if (messageLeave.getTo() != null) {
-            Message endDialog = messageService.endDialogMessage(user.getId());
+            Message endDialog = messageService.endDialogMessage(user.getId(), interlocutor);
             messagingTemplate.convertAndSend(topic + messageLeave.getSenderId(), endDialog);
-            endDialog = messageService.endDialogMessage(messageLeave.getTo());
-            if (interlocutor.getUserSocket() == null) {
+            endDialog = messageService.endDialogMessage(messageLeave.getTo(), user);
+            if (interlocutor.getMessagingTemplate() != null) {
                 messagingTemplate.convertAndSend(topic + messageLeave.getTo(), endDialog);
                 messagingTemplate.convertAndSend(topic + messageLeave.getTo(), message);
-            } else {
+            }
+            if (interlocutor.getUserSocket() != null) {
                 messageService.sendMessageToSocket(interlocutor, endDialog);
-                messageService.sendMessageToSocket(interlocutor, messageLeave);
+                messageService.sendMessageToSocket(interlocutor, message);
+            }
+            if (interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null) {
+                interlocutor.getMessagesForInterlocutor().add(endDialog);
+                interlocutor.getMessagesForInterlocutor().add(message);
             }
             userService.setMessagingTemplate(messagingTemplate);
             userService.startDialogue(message, interlocutor);
+            headerAccessor.getSessionAttributes().remove(sessionInterlocutor);
         } else {
             messagingTemplate.convertAndSend(topic + user.getId(), message);
         }
@@ -157,4 +170,3 @@ public class WebSocketController {
 
 
 }
-

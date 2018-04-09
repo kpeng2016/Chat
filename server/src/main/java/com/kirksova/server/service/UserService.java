@@ -157,22 +157,26 @@ public class UserService {
 
     public void startDialogue(Message message, User user) {
         while (user.getMaxClientCount() != user.getClientCountNow()) {
-            message = deleteClientInQueue(message);
-            if (message.getTypeOfMessage() == MessageType.NO_CLIENT_IN_QUEUE) {
+            Message message1 = deleteClientInQueue(message);
+            if (message1.getTypeOfMessage() == MessageType.NO_CLIENT_IN_QUEUE) {
                 return;
             }
-            log.info("Dialogue between agent " + message.getNameTo() + " and client " + user.getName()
+            log.info("Dialogue between agent " + user.getName() + " and client " + message1.getSenderName()
                 + " was started");
-            messagingTemplate.convertAndSend(topic + message.getSenderId(), message);
-            Long messageTo = message.getTo();
+            messagingTemplate.convertAndSend(topic + message1.getTo(), message1);
+            Long messageTo = message1.getSenderId();
             User interlocutor = onlineClients.stream()
                 .filter(user1 -> user1.getId().equals(messageTo)).findFirst().get();
             user.getClientsAgent().put(messageTo, interlocutor);
-            Message messageForClient = getClientMessageAboutNewDialog(message);
+            Message messageForClient = getClientMessageAboutNewDialog(message1);
             if (interlocutor.getMessagingTemplate() != null) {
-                messagingTemplate.convertAndSend(topic + messageForClient.getSenderId(), messageForClient);
-            } else {
+                messagingTemplate.convertAndSend(topic + interlocutor.getId(), messageForClient);
+            }
+            if (interlocutor.getUserSocket() != null) {
                 messageService.sendMessageToSocket(interlocutor, messageForClient);
+            }
+            if (interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null) {
+                messageService.sendMessageToRest(interlocutor, messageForClient);
             }
             user.iterateClientCountNow();
             user.iterateClientCountTotal();
@@ -182,12 +186,13 @@ public class UserService {
 
     public Message setMaxClientCount(Message message) {
         Integer maxClientCount = Integer.parseInt(message.getText());
-        User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
+        User user = onlineAgents.stream()
+            .filter(user1 -> user1.getId().equals(message.getSenderId())).findFirst().get();
         if (maxClientCount < user.getClientCountNow()) {
             return new Message(message.getSenderId(), incorrectDataMaxCountClients,
                 MessageType.INCORRECT_DATA_MAX_COUNT_CLIENTS);
         }
-        if(maxClientCount == user.getMaxClientCount()){
+        if (maxClientCount == user.getMaxClientCount()) {
             return new Message(message.getSenderId(), notUpdateDataMaxCountClients,
                 MessageType.INCORRECT_DATA_MAX_COUNT_CLIENTS);
         }
@@ -220,8 +225,8 @@ public class UserService {
     public Message deleteClientInQueue(Message message) {
         User client = clientQueue.pull();
         if (client != null) {
-            return new Message(message.getSenderId(), connectedClient + client.getName(), MessageType.CONNECTED_CLIENT,
-                client.getId(), client.getName());
+            return new Message(client.getId(), connectedClient + client.getName(), MessageType.CONNECTED_CLIENT,
+                message.getSenderId(), client.getName());
         }
         return new Message(message.getSenderId(), noClientInQueue, MessageType.NO_CLIENT_IN_QUEUE);
     }
@@ -247,8 +252,8 @@ public class UserService {
                 if (user.getUserSocket() == null) {
                     headerAccessor.getSessionAttributes().put(sessionInterlocutor, interlocutor);
                 }
-                return new Message(userId, connectedAgent + interlocutor.getName(),
-                    MessageType.CONNECTED_AGENT, interlocutor.getId(), interlocutor.getName());
+                return new Message(interlocutor.getId(), connectedAgent + interlocutor.getName(),
+                    MessageType.CONNECTED_AGENT, userId, interlocutor.getName());
             } else {
                 putClientInQueue(user);
                 return new Message(userId, noFreeAgent, MessageType.NO_FREE_AGENT);
@@ -262,17 +267,17 @@ public class UserService {
     }
 
     public Message getAgentMessageAboutNewDialog(Message message) {
-        User user = UserService.getOnlineClients().stream().filter(user1 -> user1.getId().equals(message.getSenderId()))
+        User user = onlineClients.stream().filter(user1 -> user1.getId().equals(message.getTo()))
             .findFirst().get();
-        return new Message(message.getTo(), connectedClient + user.getName(), MessageType.CONNECTED_CLIENT,
-            user.getId(), user.getName());
+        return new Message(user.getId(), connectedClient + user.getName(), MessageType.CONNECTED_CLIENT,
+            message.getSenderId(), user.getName());
     }
 
     public Message getClientMessageAboutNewDialog(Message message) {
-        User user = UserService.getOnlineAgents().stream().filter(user1 -> user1.getId().equals(message.getSenderId()))
+        User user = onlineAgents.stream().filter(user1 -> user1.getId().equals(message.getTo()))
             .findFirst().get();
-        return new Message(message.getTo(), connectedAgent + user.getName(), MessageType.CONNECTED_AGENT,
-            user.getId(), user.getName());
+        return new Message(user.getId(), connectedAgent + user.getName(), MessageType.CONNECTED_AGENT,
+            message.getSenderId(), user.getName());
     }
 
     public void setClientSession(SimpMessageHeaderAccessor headerAccessor, UserEntity userEntity) {

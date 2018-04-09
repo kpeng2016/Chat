@@ -5,7 +5,7 @@ public class Message {
     private MessageType typeOfMessage;
     private Long senderId;
     private Long to;
-    private String nameTo;
+    private String senderName;
     private String text;
 
     public Message() {
@@ -20,7 +20,7 @@ public class Message {
         this.text = text;
         this.typeOfMessage = typeOfMessage;
         this.to = to;
-        this.nameTo = nameTo;
+        this.senderName = nameTo;
     }
 
     public Long getSenderId() {
@@ -39,8 +39,8 @@ public class Message {
         return to;
     }
 
-    public String getNameTo() {
-        return nameTo;
+    public String getSenderName() {
+        return senderName;
     }
 
     public enum MessageType {

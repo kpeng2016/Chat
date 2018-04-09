@@ -162,19 +162,6 @@ button.leave {
     margin-top: 100px;
 }
 
-#tabs ul {
-    list-style-type: none;
-    background-color: #FFF;
-    margin: 0;
-    overflow: auto;
-    overflow-y: scroll;
-    padding: 0 20px 0px 20px;
-    height: calc(100% - 150px);
-}
-
-#tab-content {
-}
-
 #chat-page ul {
     list-style-type: none;
     background-color: #FFF;
@@ -208,7 +195,7 @@ button.leave {
 }
 
 #tabs .close {
-    margin-left: 7px;
+    margin-left: 2px;
 }
 
 #chat-page .event-message {

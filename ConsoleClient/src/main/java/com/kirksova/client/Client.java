@@ -61,7 +61,7 @@ public class Client {
                     message = new Message(messageServer.getSenderId(), encodedString, MessageType.MESSAGE_CHAT);
                 }else {
                     message = new Message(messageServer.getSenderId(), strOut, MessageType.MESSAGE_CHAT,
-                        messageServer.getTo(), messageServer.getNameTo());
+                        messageServer.getTo(), messageServer.getSenderName());
                 }
             } else {
                 message = new Message(null, strOut, MessageType.MESSAGE_CHAT);

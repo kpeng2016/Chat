@@ -7,7 +7,7 @@ public class Message {
     private MessageType typeOfMessage;
     private Long senderId;
     private Long to;
-    private String nameTo;
+    private String senderName;
     private String text;
 
     public Message() {
@@ -22,7 +22,7 @@ public class Message {
         this.text = text;
         this.typeOfMessage = typeOfMessage;
         this.to = to;
-        this.nameTo = nameTo;
+        this.senderName = nameTo;
     }
 
     public Long getSenderId() {
@@ -41,8 +41,8 @@ public class Message {
         return to;
     }
 
-    public String getNameTo() {
-        return nameTo;
+    public String getSenderName() {
+        return senderName;
     }
 
     public enum MessageType {
@@ -64,8 +64,8 @@ public class Message {
         this.to = to;
     }
 
-    public void setNameTo(String nameTo) {
-        this.nameTo = nameTo;
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
     }
 
     public void setText(String text) {
@@ -85,13 +85,13 @@ public class Message {
         return typeOfMessage == message.typeOfMessage &&
             Objects.equals(senderId, message.senderId) &&
             Objects.equals(to, message.to) &&
-            Objects.equals(nameTo, message.nameTo) &&
+            Objects.equals(senderName, message.senderName) &&
             Objects.equals(text, message.text);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(typeOfMessage, senderId, to, nameTo, text);
+        return Objects.hash(typeOfMessage, senderId, to, senderName, text);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class Message {
             "typeOfMessage=" + typeOfMessage +
             ", senderId=" + senderId +
             ", to=" + to +
-            ", nameTo='" + nameTo + '\'' +
+            ", senderName='" + senderName + '\'' +
             ", text='" + text + '\'' +
             '}';
     }

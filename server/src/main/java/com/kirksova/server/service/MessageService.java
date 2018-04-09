@@ -45,6 +45,10 @@ public class MessageService {
         messagingTemplate.convertAndSend(topic + interlocutor.getId(), message);
     }
 
+    public void sendMessageToRest(User interlocutor, Message message) {
+        interlocutor.getMessagesForInterlocutor().add(message);
+    }
+
     public Message checkValidLeave(User user, User interlocutor) {
         if (interlocutor != null) {
             if (user.getUserType() == User.TypeOfUser.CLIENT) {
@@ -54,7 +58,7 @@ public class MessageService {
                 interlocutor.getClientsAgent().remove(user.getId(), user);
                 return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
             } else {
-                return new Message(user.getId(), agentCantLeave, MessageType.AGENT_CANT_LEAVE, interlocutor.getId(),
+                return new Message(interlocutor.getId(), agentCantLeave, MessageType.AGENT_CANT_LEAVE,user.getId() ,
                     interlocutor.getName());
             }
         } else {
@@ -62,8 +66,8 @@ public class MessageService {
         }
     }
 
-    public Message endDialogMessage(Long id) {
-        return new Message(id, endDialogue, MessageType.END_DIALOGUE);
+    public Message endDialogMessage(Long id, User interlocutor) {
+        return new Message(interlocutor.getId(), endDialogue, MessageType.END_DIALOGUE, id, interlocutor.getName());
     }
 
 }

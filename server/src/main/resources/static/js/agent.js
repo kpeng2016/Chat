@@ -9,7 +9,6 @@ var signInForm = document.querySelector('#signInForm');
 var numberClientForm = document.querySelector('#numberClientForm');
 var messageForm = document.querySelector('#messageForm');
 var messageInput = document.querySelector('#message');
-var messageArea = document.querySelector('#messageArea');
 var checkRegister = document.querySelector('.checkRegister');
 var connectingElement = document.querySelector('.connecting');
 var username = document.querySelector('#nameSignUpAgent').value.trim();
@@ -22,7 +21,6 @@ var subscription = null;
 var message = null;
 var nameInterlocutor = null;
 var mapName = new Map();
-var button='<button class="close" type="button" title="Remove this page">×</button>';
 
 var colors = [
   '#2196F3', '#32c787', '#00BCD4', '#ff5652',
@@ -122,28 +120,27 @@ function onError(error) {
 function sendMessage(event) {
   var messageContent = messageInput.value.trim();
   var messageElement = document.createElement('li');
+  var activeTab = document.querySelector('.tab-pane.fade.active.show');
+  if(activeTab){
+    to = $(activeTab).closest("div").prop("id").substring(3);
+  }
   if (messageContent && stompClient) {
     userMessage = {
       senderId: userId,
       text: messageInput.value,
       typeOfMessage: 'MESSAGE_CHAT',
       to: to,
-      nameTo: nameInterlocutor
+      senderName: username
     };
     if (!to) {
       messageElement.classList.add('chat-message');
       settingMessageUser(messageElement);
-      $('#tab-list').append($('<li><a href="#tab' + to + '" role="tab" data-toggle="tab">Tab ' + to + '</a></li>'));
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, userMessage);
+      printMessage(messageElement, userMessage);
       stompClient.send("/app/chat.search", {}, JSON.stringify(userMessage));
     } else {
       messageElement.classList.add('chat-message');
       settingMessageUser(messageElement);
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, userMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, userMessage);
+      printMessage(messageElement, userMessage);
       stompClient.send("/app/chat.sendMessageInterlocutor", {},
           JSON.stringify(userMessage));
     }
@@ -192,58 +189,48 @@ function onMessageReceived(payload) {
       chatPage.classList.remove('hidden');
       connectingElement.classList.add('hidden');
       messageElement.classList.add('event-message');
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, serverMessage);
+      printMessage(messageElement, serverMessage);
       break;
     case 'CONNECTED_CLIENT':
-      nameInterlocutor = serverMessage.nameTo;
-      to = serverMessage.to;
+      nameInterlocutor = serverMessage.senderName;
+      to = serverMessage.senderId;
       mapName.set(to, nameInterlocutor);
-      $('#tabs').append($('<li><a href="#tab' + to + '" data-toggle="tab">' + nameInterlocutor + '</a></li>'));
-      //$('<li><a href="#tab'+to+'" data-toggle="tab">'+nameInterlocutor+'</a></li>').appendTo('#tabs');
-      $('#tabs').find('a:last').tab('show');
+      $('#tab-list').append($('<li><a href="#tab' + to + '" role="tab" data-toggle="tab">' + nameInterlocutor + '<button id = "button'
+          + to + '" disabled="disabled" class = "close"  type="button" title="Remove this page">&#10006</button></a></li>'));
+      $('#tab-content').append($('<div class="tab-pane fade" id="tab' + to + '"><ul id="messageArea' + to + '"></ul></div>'));
       messageElement.classList.add('event-message');
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, serverMessage);
-      break;
-    case 'END_DIALOGUE':
-      messageElement.classList.add('event-message');
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, serverMessage);
-      to = serverMessage.to;
-      nameInterlocutor = serverMessage.nameTo;
+      printMessage(messageElement, serverMessage);
       break;
     case 'MESSAGE_CHAT':
       to = serverMessage.senderId;
       messageElement.classList.add('chat-message');
       settingMessageInterlocutor(messageElement, serverMessage);
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, serverMessage);
+      printMessage(messageElement, serverMessage);
       break;
     case 'INCORRECT_DATA_MAX_COUNT_CLIENTS':
     case 'CORRECT_DATA_MAX_COUNT_CLIENTS':
     case 'NO_FREE_AGENT':
     case 'FIRST_MESSAGE_AGENT':
       messageElement.classList.add('event-message');
-      $('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>');
-      //$('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, serverMessage) +'</div>').appendTo('.tab-content');
-      //printMessage(messageElement, serverMessage);
+      printMessage(messageElement, serverMessage);
+      break;
+    case 'END_DIALOGUE':
+      to = serverMessage.senderId;
+      messageElement.classList.add('event-message');
+      printMessage(messageElement, serverMessage);
+      var remove = document.querySelector('#button' + to);
+      remove.removeAttribute('disabled');
       break;
     case 'LEAVE_CLIENT':
     case 'DISCONNECTION_OF_THE_CLIENT':
       message = {
-        senderId: serverMessage.senderId,
+        senderId: userId,
         text: 'The client left the chat, wait until the new client connects or closes the page to exit the network',
         typeOfMessage: serverMessage.typeOfMessage
       };
-      $('#tabs').append($('<li><a href="#tab' + to + '" data-toggle="tab">' + nameInterlocutor + '<button class="close" type="button" title="Remove this page">×</button></a></li>'));
       messageElement.classList.add('event-message');
-      $('#tab-content').append($('<div class="tab-pane" id="tab'+to+'">'+printMessage(messageElement, message) +'</div>').appendTo('.tab-content'));
-      //printMessage(messageElement, message);
+      printMessage(messageElement, message);
+      mapName.delete(to);
       break;
     case 'noClientInQueue':
       break;
@@ -278,6 +265,7 @@ function settingMessageUser(messageElement) {
 }
 
 function printMessage(messageElement, message) {
+  var messageArea = document.querySelector('#messageArea' + to);
   var textElement = document.createElement('p');
   var messageText = document.createTextNode(message.text);
   textElement.appendChild(messageText);
@@ -295,23 +283,14 @@ function getAvatarColor(messageSender) {
   return colors[index];
 }
 
-function resetTab(){
-  var tabs=$("#tabs").find("li:not(:first)");
-  $(tabs).each(function(k,v){
-    $(this).find('a').html('Tab ' + to + button);
-  });
-}
-
-$(document).ready(function() {
-    $('#tabs').on('click', '.close', function() {
+$(document).ready(function () {
+  $('#tab-list').on('click', '.close', function () {
     var tabID = $(this).parents('a').attr('href');
+    to = tabID;
     $(this).parents('li').remove();
     $(tabID).remove();
 
-    //display first tab
-    var tabFirst = $('#tabs').find('a:first');
-    resetTab();
-    tabFirst.tab('show');
+
   });
 });
 
