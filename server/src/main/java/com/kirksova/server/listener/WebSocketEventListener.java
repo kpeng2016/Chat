@@ -31,8 +31,6 @@ public class WebSocketEventListener {
     private String topic;
     @Value("${user}")
     private String sessionUser;
-    @Value("${interlocutor}")
-    private String sessionInterlocutor;
     @Value("${message.disconnectedOfTheAgent}")
     private String disconnectedOfTheAgent;
     @Value("${message.disconnectedOfTheClient}")
@@ -49,11 +47,11 @@ public class WebSocketEventListener {
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-        User interlocutor;
+        User interlocutor = null;
         if (user != null) {
             if (user.getUserType() == User.TypeOfUser.AGENT) {
                 log.info("Disconnect agent " + user.getName());
-                for (Map.Entry<Long, User> entry: user.getClientsAgent().entrySet()){
+                for (Map.Entry<Long, User> entry: user.getInterlocutorList().entrySet()){
                     interlocutor = entry.getValue();
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                         + " was over");
@@ -62,6 +60,7 @@ public class WebSocketEventListener {
                     Message disconnectedMessage = new Message(interlocutor.getId(), disconnectedOfTheAgent,
                         MessageType.DISCONNECTION_OF_THE_AGENT);
                     if(interlocutor.getMessagingTemplate() != null) {
+
                         messagingTemplate.convertAndSend(topic + interlocutor.getId(), chatMessage);
                         messagingTemplate.convertAndSend(topic + interlocutor.getId(), disconnectedMessage);
                     }
@@ -74,11 +73,13 @@ public class WebSocketEventListener {
                         messageService.sendMessageToRest(interlocutor, disconnectedMessage);
                     }
                 }
-                user.getClientsAgent().clear();
+                user.getInterlocutorList().clear();
                 UserService.getOnlineAgents().remove(user);
             } else {
                 log.info("Disconnect client " + user.getName());
-                interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
+                if(user.getInterlocutorList().values().iterator().hasNext()) {
+                    interlocutor = user.getInterlocutorList().values().iterator().next();
+                }
                 if (interlocutor != null) {
                     log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                         + " was over");
@@ -99,7 +100,7 @@ public class WebSocketEventListener {
                         messageService.sendMessageToRest(interlocutor, disconnectedMessage);
                     }
                     interlocutor.deleteClientCountNow();
-                    interlocutor.getClientsAgent().remove(user.getId(), user);
+                    interlocutor.getInterlocutorList().remove(user.getId(), user);
                     userService.setMessagingTemplate(messagingTemplate);
                     userService.startDialogue(chatMessage, interlocutor);
                 }

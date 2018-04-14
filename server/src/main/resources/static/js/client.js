@@ -210,8 +210,8 @@ function onMessageReceived(payload) {
     case 'END_DIALOGUE':
       messageElement.classList.add('event-message');
       printMessage(messageElement, serverMessage);
-      to = serverMessage.senderId;
-      nameInterlocutor = serverMessage.senderName;
+      to = null;
+      nameInterlocutor = null;
       break;
     case 'MESSAGE_CHAT':
       messageElement.classList.add('chat-message');

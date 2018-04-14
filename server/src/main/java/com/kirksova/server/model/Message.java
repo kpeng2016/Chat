@@ -17,12 +17,12 @@ public class Message {
         this(senderId, text, typeOfMessage, null, null);
     }
 
-    public Message(Long senderId, String text, MessageType typeOfMessage, Long to, String nameTo) {
+    public Message(Long senderId, String text, MessageType typeOfMessage, Long to, String senderName) {
         this.senderId = senderId;
         this.text = text;
         this.typeOfMessage = typeOfMessage;
         this.to = to;
-        this.senderName = nameTo;
+        this.senderName = senderName;
     }
 
     public Long getSenderId() {

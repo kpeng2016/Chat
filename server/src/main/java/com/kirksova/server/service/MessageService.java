@@ -55,7 +55,7 @@ public class MessageService {
                 log.info(
                     "Dialogue between agent " + interlocutor.getName() + " and client " + user.getName() + " was over");
                 interlocutor.deleteClientCountNow();
-                interlocutor.getClientsAgent().remove(user.getId(), user);
+                interlocutor.getInterlocutorList().remove(user.getId(), user);
                 return new Message(interlocutor.getId(), disconnectedOfTheClient, MessageType.LEAVE_CLIENT);
             } else {
                 return new Message(interlocutor.getId(), agentCantLeave, MessageType.AGENT_CANT_LEAVE,user.getId() ,

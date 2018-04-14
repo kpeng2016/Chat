@@ -19,10 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
+import java.util.*;
 
 @Component
 public class ThreadSocket implements Runnable {
@@ -130,14 +127,16 @@ public class ThreadSocket implements Runnable {
         if (userMessage == null) {
             return;
         }
-        if (TypeOfUser.AGENT.equals(user.getUserType()) && userMessage.getTo() != null) {
+        if (TypeOfUser.AGENT == user.getUserType() && userMessage.getTo() != null) {
             interlocutor = UserService.getOnlineClients().stream()
                 .filter(user1 -> user1.getId().equals(userMessage.getTo())).findFirst().get();
             return;
         }
-        if (TypeOfUser.CLIENT.equals(user.getUserType()) && userMessage.getTo() != null) {
+        /*if (TypeOfUser.CLIENT == user.getUserType() && userMessage.getTo() != null) {
             interlocutor = UserService.getOnlineAgents().stream()
                 .filter(user1 -> user1.getId().equals(userMessage.getTo())).findFirst().get();
+            user.getInterlocutorList().put(interlocutor.getId(), interlocutor);
+            interlocutor.getInterlocutorList().put(user.getId(), user);
             for (Message clientWithoutAgentMessage : clientWithoutAgentMessages) {
                 userMessage = new Message(clientWithoutAgentMessage.getSenderId(),
                     clientWithoutAgentMessage.getText(), MessageType.MESSAGE_CHAT, interlocutor.getId(),
@@ -146,7 +145,7 @@ public class ThreadSocket implements Runnable {
             }
             clientWithoutAgentMessages.clear();
             return;
-        }
+        }*/
         if (user.getUserType() == TypeOfUser.CLIENT && serverMessage.getTo() == null) {
             clientWithoutAgentMessages.add(userMessage);
         }
@@ -156,11 +155,13 @@ public class ThreadSocket implements Runnable {
             interlocutor = UserService.getOnlineAgents().stream()
                 .filter(user1 -> user1.getId().equals(serverMessage.getTo())).findFirst().get();
             serverMessage = userService.getAgentMessageAboutNewDialog(serverMessage);
+            user.getInterlocutorList().put(interlocutor.getId(), interlocutor);
+            interlocutor.getInterlocutorList().put(user.getId(), user);
             sendMessageInterlocutor(serverMessage);
             for (Message clientWithoutAgentMessage : clientWithoutAgentMessages) {
                 userMessage = new Message(clientWithoutAgentMessage.getSenderId(),
                     clientWithoutAgentMessage.getText(), MessageType.MESSAGE_CHAT, interlocutor.getId(),
-                    interlocutor.getName());
+                    user.getName());
                 sendMessageInterlocutor(userMessage);
             }
             clientWithoutAgentMessages.clear();
@@ -198,6 +199,9 @@ public class ThreadSocket implements Runnable {
         if (userMessage == null) {
             return;
         }
+        byte[] decodedBytes = Base64.getDecoder().decode(userMessage.getText());
+        String decodedString = new String(decodedBytes);
+        userMessage.setText(decodedString);
         userService.setPassword(userMessage);
         UserEntity userEntity = userEntityService.getUserById(serverMessage.getSenderId());
         setClientSession(userEntity);
@@ -212,6 +216,9 @@ public class ThreadSocket implements Runnable {
         if (userMessage == null) {
             return;
         }
+        byte[] decodedBytes = Base64.getDecoder().decode(userMessage.getText());
+        String decodedString = new String(decodedBytes);
+        userMessage.setText(decodedString);
         serverMessage = userService.validateUserPasswordSignIn(userMessage);
         while (serverMessage.getTypeOfMessage() != MessageType.CORRECT_LOGIN_PASSWORD) {
             outUserWriter.println(mapper.writeValueAsString(serverMessage));
@@ -256,20 +263,26 @@ public class ThreadSocket implements Runnable {
         }
         log.info("Dialogue between agent " + message.getSenderName() + " and client " + user.getName() + " was started");
         outUserWriter.println(mapper.writeValueAsString(message));
-        Long messageTo = message.getTo();
+        Long messageTo = message.getSenderId();
         interlocutor = UserService.getOnlineClients().stream().filter(user1 -> user1.getId().equals(messageTo))
             .findFirst().get();
         Message messageForClient = userService.getClientMessageAboutNewDialog(message);
         sendMessageInterlocutor(messageForClient);
         user.iterateClientCountTotal();
+        user.getInterlocutorList().put(messageTo, interlocutor);
+        interlocutor.getInterlocutorList().put(user.getId(), user);
         user.setFreeAgent(false);
     }
 
     private void sendMessageInterlocutor(Message message) {
+        if (interlocutor.getMessagingTemplate() != null) {
+            messageService.sendMessageToWeb(interlocutor, message);
+        }
         if (interlocutor.getUserSocket() != null) {
             messageService.sendMessageToSocket(interlocutor, message);
-        } else {
-            messageService.sendMessageToWeb(interlocutor, message);
+        }
+        if (interlocutor.getMessagingTemplate() == null && interlocutor.getUserSocket() == null) {
+            messageService.sendMessageToRest(interlocutor, message);
         }
     }
 
@@ -305,6 +318,7 @@ public class ThreadSocket implements Runnable {
                         MessageType.DISCONNECTION_OF_THE_AGENT);
                     sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId(), user));
                     sendMessageInterlocutor(serverMessage);
+                    interlocutor.getInterlocutorList().remove(user.getId());
                 }
                 UserService.getOnlineAgents().remove(user);
             } else {
@@ -313,6 +327,7 @@ public class ThreadSocket implements Runnable {
                     sendMessageInterlocutor(messageService.endDialogMessage(interlocutor.getId(), user));
                     sendMessageInterlocutor(messageService.checkValidLeave(user, interlocutor));
                     interlocutor.setFreeAgent(true);
+                    interlocutor.getInterlocutorList().remove(user.getId());
                 }
                 UserService.getOnlineClients().remove(user);
             }

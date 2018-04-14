@@ -13,15 +13,17 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 
+    private static final String pepper = ".dQUEtby7P35;k\"5EhPB<j.;,9hqvs!(<\"B]=#dBfhnyaN)v>8Z_bs%YJW/u~{w5:4B!s5F>";
     private static final String REGISTER_CLIENT = "/register client .+";
     private static final String REGISTER_AGENT = "/register agent .+";
     private static final String SIGN_IN_AGENT = "/sign in agent .+";
@@ -30,7 +32,6 @@ public class UserService {
     private static List<User> onlineAgents = Collections.synchronizedList(new ArrayList<User>());
     private static List<User> onlineClients = Collections.synchronizedList(new ArrayList<User>());
     private SimpMessageSendingOperations messagingTemplate;
-    private SimpMessageHeaderAccessor headerAccessor;
     @Autowired
     private MessageService messageService;
     @Autowired
@@ -41,8 +42,6 @@ public class UserService {
     private String topic;
     @Value("${user}")
     private String sessionUser;
-    @Value("${interlocutor}")
-    private String sessionInterlocutor;
     @Value("${message.noFreeAgent}")
     private String noFreeAgent;
     @Value("${message.wait}")
@@ -101,10 +100,28 @@ public class UserService {
     }
 
     public void setPassword(Message message) {
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-512");
+        } catch (NoSuchAlgorithmException e) {
+            log.debug("MessageDigest error", e);
+        }
+        digest.reset();
         String text = message.getText();
-        UserEntity userEntity = userEntityService.getUserById(message.getSenderId());
-        userEntity.setPassword(text);
-        userEntityService.update(userEntity);
+        try {
+            digest.update(text.getBytes("utf8"));
+            text = String.format("%040x", new BigInteger(1, digest.digest()));
+            String salt = UUID.randomUUID().toString();
+            String password = text + salt + pepper;
+            digest.update(password.getBytes("utf8"));
+            password = String.format("%040x", new BigInteger(1, digest.digest()));
+            UserEntity userEntity = userEntityService.getUserById(message.getSenderId());
+            userEntity.setSalt(salt);
+            userEntity.setPassword(password);
+            userEntityService.update(userEntity);
+        } catch (UnsupportedEncodingException e) {
+            log.debug("digest.update error", e);
+        }
     }
 
     public Message validateUserNameSignIn(Message message) {
@@ -140,16 +157,33 @@ public class UserService {
     }
 
     public Message validateUserPasswordSignIn(Message message) {
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-512");
+        } catch (NoSuchAlgorithmException e) {
+            log.debug("MessageDigest error", e);
+        }
+        digest.reset();
         String text = message.getText();
-        UserEntity userEntity = userEntityService.getUserById(message.getSenderId());
-        if (userEntity.getPassword().equals(text)) {
-            if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
-                log.info("Login agent " + userEntity.getName());
+        try {
+            digest.update(text.getBytes("utf8"));
+            text = String.format("%040x", new BigInteger(1, digest.digest()));
+            UserEntity userEntity = userEntityService.getUserById(message.getSenderId());
+            String salt = userEntity.getSalt();
+            String password = text + salt + pepper;
+            digest.update(password.getBytes("utf8"));
+            password = String.format("%040x", new BigInteger(1, digest.digest()));
+            if (userEntity.getPassword().equals(password)) {
+                if (userEntity.getUserType() == User.TypeOfUser.AGENT) {
+                    log.info("Login agent " + userEntity.getName());
 
-            } else {
-                log.info("Login client " + userEntity.getName());
+                } else {
+                    log.info("Login client " + userEntity.getName());
+                }
+                return new Message(message.getSenderId(), correctSignInData, MessageType.CORRECT_LOGIN_PASSWORD);
             }
-            return new Message(message.getSenderId(), correctSignInData, MessageType.CORRECT_LOGIN_PASSWORD);
+        } catch (UnsupportedEncodingException e) {
+            log.debug("digest.update error", e);
         }
         log.info("Not valid password data");
         return new Message(message.getSenderId(), incorrectLoginPassword, MessageType.INCORRECT_LOGIN_PASSWORD);
@@ -167,7 +201,8 @@ public class UserService {
             Long messageTo = message1.getSenderId();
             User interlocutor = onlineClients.stream()
                 .filter(user1 -> user1.getId().equals(messageTo)).findFirst().get();
-            user.getClientsAgent().put(messageTo, interlocutor);
+            user.getInterlocutorList().put(messageTo, interlocutor);
+            interlocutor.getInterlocutorList().put(user.getId(), user);
             Message messageForClient = getClientMessageAboutNewDialog(message1);
             if (interlocutor.getMessagingTemplate() != null) {
                 messagingTemplate.convertAndSend(topic + interlocutor.getId(), messageForClient);
@@ -180,6 +215,15 @@ public class UserService {
             }
             user.iterateClientCountNow();
             user.iterateClientCountTotal();
+            for (int i = 0; i < interlocutor.getMessageWithoutAgent().size(); i++) {
+                if (user.getMessagingTemplate() != null) {
+                    messagingTemplate
+                        .convertAndSend(topic + user.getId(), interlocutor.getMessageWithoutAgent().get(i));
+                }
+                if (user.getUserSocket() != null) {
+                    messageService.sendMessageToSocket(user, interlocutor.getMessageWithoutAgent().get(i));
+                }
+            }
         }
         user.setFreeAgent(false);
     }
@@ -243,14 +287,12 @@ public class UserService {
                 User interlocutor = freeAgents.get(0);
                 interlocutor.iterateClientCountTotal();
                 interlocutor.iterateClientCountNow();
-                interlocutor.getClientsAgent().put(userId, user);
+                interlocutor.getInterlocutorList().put(userId, user);
+                user.getInterlocutorList().put(interlocutor.getId(), interlocutor);
                 log.info("Dialogue between agent " + interlocutor.getName() + " and client " + user.getName()
                     + " was started");
                 if (interlocutor.getMaxClientCount() == interlocutor.getClientCountNow()) {
                     interlocutor.setFreeAgent(false);
-                }
-                if (user.getUserSocket() == null) {
-                    headerAccessor.getSessionAttributes().put(sessionInterlocutor, interlocutor);
                 }
                 return new Message(interlocutor.getId(), connectedAgent + interlocutor.getName(),
                     MessageType.CONNECTED_AGENT, userId, interlocutor.getName());
@@ -285,7 +327,7 @@ public class UserService {
             UserEntityConverter userEntityConverter = new UserEntityConverter();
             User user = userEntityConverter.convertUserEntityToUser(userEntity);
             user.setMessagingTemplate(messagingTemplate);
-            UserService.getOnlineClients().add(user);
+            onlineClients.add(user);
             headerAccessor.getSessionAttributes().put(sessionUser, user);
         }
     }
@@ -300,7 +342,7 @@ public class UserService {
             user.setFreeAgent(true);
             user.setMessagingTemplate(messagingTemplate);
             headerAccessor.getSessionAttributes().put(sessionUser, user);
-            UserService.getOnlineAgents().add(user);
+            onlineAgents.add(user);
         }
     }
 
@@ -310,10 +352,6 @@ public class UserService {
 
     public static List<User> getOnlineClients() {
         return onlineClients;
-    }
-
-    public void setHeaderAccessor(SimpMessageHeaderAccessor headerAccessor) {
-        this.headerAccessor = headerAccessor;
     }
 
     public void setMessagingTemplate(SimpMessageSendingOperations messagingTemplate) {

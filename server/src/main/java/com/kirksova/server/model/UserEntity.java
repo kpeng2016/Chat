@@ -10,6 +10,7 @@ public class UserEntity {
     private String password;
     private User.TypeOfUser userType;
     private int maxClientCount = 0;
+    private String salt;
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
@@ -52,5 +53,13 @@ public class UserEntity {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public String getSalt() {
+        return salt;
+    }
+
+    public void setSalt(String salt) {
+        this.salt = salt;
     }
 }

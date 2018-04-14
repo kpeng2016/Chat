@@ -16,9 +16,11 @@ import java.util.Map;
 public class User {
 
     @JsonIgnore
+    private List<Message> messageWithoutAgent = new ArrayList<>();
+    @JsonIgnore
     private List<Message> messagesForInterlocutor = new ArrayList<>();
     @JsonIgnore
-    private Map<Long, User> clientsAgent = new HashMap<>();
+    private Map<Long, User> interlocutorList = new HashMap<>();
     private long id;
     @JsonIgnore
     private String password;
@@ -119,12 +121,16 @@ public class User {
         this.userType = userType;
     }
 
-    public Map<Long, User> getClientsAgent() {
-        return clientsAgent;
+    public Map<Long, User> getInterlocutorList() {
+        return interlocutorList;
     }
 
     public List<Message> getMessagesForInterlocutor() {
         return messagesForInterlocutor;
+    }
+
+    public List<Message> getMessageWithoutAgent() {
+        return messageWithoutAgent;
     }
 
     public enum TypeOfUser {

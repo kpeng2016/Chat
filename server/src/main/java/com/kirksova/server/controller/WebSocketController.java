@@ -16,6 +16,8 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 
+import java.util.Base64;
+
 @Controller
 public class WebSocketController {
 
@@ -27,8 +29,6 @@ public class WebSocketController {
     private String topic;
     @Value("${user}")
     private String sessionUser;
-    @Value("${interlocutor}")
-    private String sessionInterlocutor;
 
     @Autowired
     public WebSocketController(SimpMessageSendingOperations messagingTemplate, MessageService messageService,
@@ -53,6 +53,9 @@ public class WebSocketController {
 
     @MessageMapping("/chat.setPassword")
     public void setPassword(@Payload Message registerMessage, SimpMessageHeaderAccessor headerAccessor) {
+        byte[] decodedBytes = Base64.getDecoder().decode(registerMessage.getText());
+        String decodedString = new String(decodedBytes);
+        registerMessage.setText(decodedString);
         userService.setPassword(registerMessage);
         UserEntity userEntity = userEntityService.getUserById(registerMessage.getSenderId());
         userService.setMessagingTemplate(messagingTemplate);
@@ -66,6 +69,9 @@ public class WebSocketController {
 
     @MessageMapping("/chat.checkPassword")
     public void checkPassword(@Payload Message registerMessage, SimpMessageHeaderAccessor headerAccessor) {
+        byte[] decodedBytes = Base64.getDecoder().decode(registerMessage.getText());
+        String decodedString = new String(decodedBytes);
+        registerMessage.setText(decodedString);
         registerMessage = userService.validateUserPasswordSignIn(registerMessage);
         messagingTemplate.convertAndSend(topic + registerMessage.getSenderId(),
             registerMessage);
@@ -83,7 +89,6 @@ public class WebSocketController {
 
     @MessageMapping("/chat.setMaxClients")
     public void setMaxClient(@Payload Message message, SimpMessageHeaderAccessor headerAccessor) {
-        userService.setHeaderAccessor(headerAccessor);
         message = userService.setMaxClientCount(message);
         messagingTemplate.convertAndSend(topic + message.getSenderId(), message);
         if (message.getTypeOfMessage() == MessageType.CORRECT_DATA_MAX_COUNT_CLIENTS) {
@@ -96,13 +101,13 @@ public class WebSocketController {
     @MessageMapping("/chat.sendMessageInterlocutor")
     public void sendMessageInterlocutor(@Payload Message chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-        User interlocutor = user.getClientsAgent().get(chatMessage.getTo());
+        User interlocutor = user.getInterlocutorList().get(chatMessage.getTo());
         if (interlocutor == null) {
-            interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
+            interlocutor = user.getInterlocutorList().values().iterator().next();
             if (interlocutor == null) {
                 interlocutor = UserService.getOnlineAgents().stream()
                     .filter(user1 -> user1.getId().equals(chatMessage.getTo())).findFirst().get();
-                headerAccessor.getSessionAttributes().put(sessionInterlocutor, interlocutor);
+                user.getInterlocutorList().put(interlocutor.getId(), interlocutor);
             }
         }
         chatMessage.setSenderName(user.getName());
@@ -119,10 +124,10 @@ public class WebSocketController {
 
     @MessageMapping("/chat.search")
     public void searchForAnInterlocutor(@Payload Message message, SimpMessageHeaderAccessor headerAccessor) {
-        userService.setHeaderAccessor(headerAccessor);
+        User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
         message = userService.searchForAnInterlocutor(message);
-        User interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
-        if (interlocutor != null) {
+        if (message.getTo() != null) {
+            User interlocutor = user.getInterlocutorList().values().iterator().next();
             messagingTemplate.convertAndSend(topic + message.getTo(), message);
             message = userService.getAgentMessageAboutNewDialog(message);
             if (interlocutor.getMessagingTemplate() != null) {
@@ -142,7 +147,7 @@ public class WebSocketController {
     @MessageMapping("/chat.leave")
     public void leave(@Payload Message messageLeave, SimpMessageHeaderAccessor headerAccessor) {
         User user = (User) headerAccessor.getSessionAttributes().get(sessionUser);
-        User interlocutor = (User) headerAccessor.getSessionAttributes().get(sessionInterlocutor);
+        User interlocutor = user.getInterlocutorList().values().iterator().next();
         Message message = messageService.checkValidLeave(user, interlocutor);
         if (messageLeave.getTo() != null) {
             Message endDialog = messageService.endDialogMessage(user.getId(), interlocutor);
@@ -162,7 +167,7 @@ public class WebSocketController {
             }
             userService.setMessagingTemplate(messagingTemplate);
             userService.startDialogue(message, interlocutor);
-            headerAccessor.getSessionAttributes().remove(sessionInterlocutor);
+            user.getInterlocutorList().remove(interlocutor.getId());
         } else {
             messagingTemplate.convertAndSend(topic + user.getId(), message);
         }

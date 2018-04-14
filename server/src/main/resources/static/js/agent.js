@@ -28,6 +28,7 @@ var colors = [
 ];
 
 function registerConnect(event) {
+  var username = document.querySelector('#nameSignUpAgent').value.trim();
   if (username) {
     var socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
@@ -175,7 +176,10 @@ function onMessageReceived(payload) {
           onMessageReceived);
       setPassword();
       registerPage.classList.add('hidden');
-      maxCountClient.classList.remove('hidden');
+      chatPage.classList.remove('hidden');
+      connectingElement.classList.add('hidden');
+      messageElement.classList.add('event-message');
+      printMessage(messageElement, serverMessage);
       break;
     case 'CORRECT_LOGIN_NAME':
       subscription.unsubscribe('/topic/start', onMessageReceived);
@@ -231,6 +235,7 @@ function onMessageReceived(payload) {
       messageElement.classList.add('event-message');
       printMessage(messageElement, message);
       mapName.delete(to);
+      to = null;
       break;
     case 'noClientInQueue':
       break;

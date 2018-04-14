@@ -17,16 +17,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 //import org.springframework.boot.test.context.SpringBootContextLoader;
 
-@RunWith(SpringJUnit4ClassRunner.class)
+//@RunWith(SpringJUnit4ClassRunner.class)
+@RunWith(SpringRunner.class)
+//@ContextConfiguration(classes = WebSocketController.class)
 @TestPropertySource(locations = "classpath:configuration.properties")
-@SpringBootTest(classes = ServerApplicationTests.class, properties = "classpath:configuration.properties")
+//@SpringBootTest
+@SpringBootTest(classes = ServerApplicationTests.class/*, properties = "classpath:configuration.properties"*/)
 //@ContextConfiguration(classes = WebSocketController.class, loader = SpringApplicationContextLoader.class)
 //@ContextConfiguration(classes=WebSocketConfig.class)
 //@SpringBootTest()
@@ -64,12 +67,19 @@ public class WebSocketControllerTest {
     @Mock
     private SimpMessageHeaderAccessor headerAccessor;
 
+    //@Autowired
     private WebSocketController unitUnderTests;
 
     @Before
     public void setUp() {
-        unitUnderTests = new WebSocketController(messagingTemplate, messageService, userService, userEntityService);
+        //unitUnderTests = new WebSocketController(messagingTemplate, messageService, userService, userEntityService);
     }
+
+    /*@Before
+    public void setUp() {
+        //MockitoAnnotations.initMocks(unitUnderTests);
+        //unitUnderTests = new WebSocketController(messagingTemplate, messageService, userService, userEntityService);
+    }*/
 
     @Test
     public void addUser() {
@@ -148,7 +158,7 @@ public class WebSocketControllerTest {
         verify(userService, times(0)).startDialogue(message, null);
     }
 
-    /*@Test
+    /*Test
     public void checkPasswordPositive() {
         Message message = new Message(1L, "password", MessageType.MESSAGE_CHAT);
         Message returnCheckPassword = new Message(1L, correctSignInData, MessageType.CORRECT_LOGIN_PASSWORD);
